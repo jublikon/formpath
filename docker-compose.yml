@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: formpath
+      POSTGRES_USER: formpath
+      POSTGRES_PASSWORD: formpath
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U formpath -d formpath"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: formpath
+      MINIO_ROOT_PASSWORD: formpath-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://formpath:formpath@postgres:5432/formpath?sslmode=disable
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY_ID: formpath
+      S3_SECRET_ACCESS_KEY: formpath-secret
+      S3_BUCKET: formpath-raw
+      S3_USE_SSL: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  minio-data:

@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+
+# Go build/test artifacts
+bin/
+*.test
+coverage.out
+
+# Local editor and OS files
+.DS_Store
+.idea/
+.vscode/
