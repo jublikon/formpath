@@ -2,13 +2,13 @@
 
 ## Summary
 
-Added missing test coverage around the first Strava ingestion slice. The change focuses on the documented OAuth, token refresh, activity fetch, canonical mapping, deduplication, raw payload storage, and sensitive-data handling expectations.
+The change focuses on the documented OAuth, token refresh, activity fetch, canonical mapping, deduplication, raw payload storage, and sensitive-data handling expectations.
+Added test coverage around the first Strava ingestion slice. 
 
 ## Context Sources
 
 - Product and epic context came from the repository documentation in `docs/product`, `docs/epics`, and `docs/adr`.
 - Implementation context came from the current Go backend under `cmd/server`.
-- No prior chat history outside the current working thread was available while writing this entry.
 - Any decisions from conversation should be captured here explicitly, because the changelog is intended to become the durable project memory.
 
 ## Relevant Changes
