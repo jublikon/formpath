@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -42,6 +43,7 @@ type fakeActivityStore struct {
 	activities []Activity
 	saveCount  int
 	err        error
+	listErr    error
 }
 
 func (store *fakeActivityStore) SaveActivities(ctx context.Context, activities []Activity) error {
@@ -51,6 +53,9 @@ func (store *fakeActivityStore) SaveActivities(ctx context.Context, activities [
 }
 
 func (store *fakeActivityStore) ListActivities(ctx context.Context, userID string) ([]Activity, error) {
+	if store.listErr != nil {
+		return nil, store.listErr
+	}
 	return store.activities, store.err
 }
 
@@ -560,5 +565,331 @@ func TestActivitiesHandler_FetchesStoresAndReturnsActivities(t *testing.T) {
 	}
 	if len(response) != 1 {
 		t.Fatalf("Expected one response activity, got %d", len(response))
+	}
+}
+
+func TestActivitiesHandler_ReturnsErrorWhenTokenIsMissing(t *testing.T) {
+	originalProviderTokenStore := providerTokenStore
+	t.Cleanup(func() {
+		providerTokenStore = originalProviderTokenStore
+	})
+
+	providerTokenStore = &fakeTokenStore{err: errors.New("token not found")}
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("Expected status 500 Internal Server Error, got %d", resp.StatusCode)
+	}
+}
+
+func TestActivitiesHandler_ReturnsBadGatewayWhenStravaFetchFails(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "rate limited", http.StatusTooManyRequests)
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "valid-access-token",
+			RefreshToken: "valid-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("Expected status 502 Bad Gateway, got %d", resp.StatusCode)
+	}
+}
+
+func TestActivitiesHandler_ReturnsBadGatewayWhenStravaJSONIsInvalid(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{`))
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "valid-access-token",
+			RefreshToken: "valid-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("Expected status 502 Bad Gateway, got %d", resp.StatusCode)
+	}
+}
+
+func TestActivitiesHandler_ReturnsErrorWhenRawStoreFails(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[]`))
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	originalProviderRawObjectStore := providerRawObjectStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+		providerRawObjectStore = originalProviderRawObjectStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "valid-access-token",
+			RefreshToken: "valid-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+	providerRawObjectStore = &fakeRawObjectStore{err: errors.New("raw store failed")}
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("Expected status 500 Internal Server Error, got %d", resp.StatusCode)
+	}
+}
+
+func TestActivitiesHandler_ReturnsBadGatewayWhenMappingFails(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[
+			{
+				"id": 123,
+				"type": "Run",
+				"start_date": "2026-05-15T06:30:00Z"
+			}
+		]`))
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	originalProviderRawObjectStore := providerRawObjectStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+		providerRawObjectStore = originalProviderRawObjectStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "valid-access-token",
+			RefreshToken: "valid-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+	providerRawObjectStore = &fakeRawObjectStore{}
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("Expected status 502 Bad Gateway, got %d", resp.StatusCode)
+	}
+}
+
+func TestActivitiesHandler_ReturnsErrorWhenActivityStoreSaveFails(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[
+			{
+				"id": 123,
+				"type": "Run",
+				"name": "Morning Run",
+				"start_date": "2026-05-15T06:30:00Z"
+			}
+		]`))
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	originalProviderRawObjectStore := providerRawObjectStore
+	originalProviderActivityStore := providerActivityStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+		providerRawObjectStore = originalProviderRawObjectStore
+		providerActivityStore = originalProviderActivityStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "valid-access-token",
+			RefreshToken: "valid-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+	providerRawObjectStore = &fakeRawObjectStore{}
+	providerActivityStore = &fakeActivityStore{err: errors.New("activity store failed")}
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("Expected status 500 Internal Server Error, got %d", resp.StatusCode)
+	}
+}
+
+func TestActivitiesHandler_ReturnsErrorWhenActivityStoreListFails(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[
+			{
+				"id": 123,
+				"type": "Run",
+				"name": "Morning Run",
+				"start_date": "2026-05-15T06:30:00Z"
+			}
+		]`))
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	originalProviderRawObjectStore := providerRawObjectStore
+	originalProviderActivityStore := providerActivityStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+		providerRawObjectStore = originalProviderRawObjectStore
+		providerActivityStore = originalProviderActivityStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "valid-access-token",
+			RefreshToken: "valid-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+	providerRawObjectStore = &fakeRawObjectStore{}
+	providerActivityStore = &fakeActivityStore{listErr: errors.New("activity list failed")}
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("Expected status 500 Internal Server Error, got %d", resp.StatusCode)
+	}
+}
+
+func TestActivitiesHandler_DoesNotExposeTokenWhenStravaFetchFails(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "secret-access-token",
+			RefreshToken: "secret-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesHandler(w, req)
+
+	resp := w.Result()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("reading response body: %v", err)
+	}
+
+	if strings.Contains(string(body), "secret-access-token") || strings.Contains(string(body), "secret-refresh-token") {
+		t.Fatalf("Expected response body not to expose token values, got %q", string(body))
 	}
 }
