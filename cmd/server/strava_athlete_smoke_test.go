@@ -11,7 +11,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func TestStravaSmoke(t *testing.T) {
+func TestStravaAthleteSmoke(t *testing.T) {
 	if os.Getenv("STRAVA_SMOKE_TEST") != "1" {
 		t.Skip("set STRAVA_SMOKE_TEST=1 to run")
 	}

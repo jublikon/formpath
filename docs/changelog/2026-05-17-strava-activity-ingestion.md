@@ -2,8 +2,7 @@
 
 ## Summary
 
-The change focuses on the documented OAuth, token refresh, activity fetch, canonical mapping, deduplication, raw payload storage, and sensitive-data handling expectations.
-Added test coverage around the first Strava ingestion slice. 
+Added test coverage and structural cleanup around the first Strava ingestion slice. The change focuses on the documented OAuth, token refresh, activity fetch, canonical mapping, deduplication, raw payload storage, and sensitive-data handling expectations.
 
 ## Context Sources
 
@@ -28,10 +27,28 @@ Added test coverage around the first Strava ingestion slice.
 - Added an opt-in MinIO integration test for raw payload storage metadata.
 - Moved persistence startup concerns out of `main.go` into a dedicated database bootstrap path, covering database connection, migrations, token store wiring, and optional MinIO raw object store wiring.
 - Moved Strava response DTOs out of `main.go` so the entrypoint stays focused on configuration, persistence setup, route registration, and server startup.
+- Split Strava OAuth/token code from Strava athlete and activity handler code:
+  - `strava_auth.go` now focuses on OAuth state, auth redirect, callback handling, token exchange, token refresh, and valid-token lookup.
+  - `strava_client.go` contains shared Strava API client configuration.
+  - `strava_athlete.go` contains the Athlete DTO, athlete fetch, and athlete HTTP handler.
+  - `strava_activity_handlers.go` contains activity ingestion HTTP handler orchestration.
+- Reorganized tests to mirror the production file responsibilities:
+  - `strava_auth_test.go` covers OAuth and token behavior.
+  - `strava_activities_test.go` covers Strava activity mapping, normalization, and object-key behavior.
+  - `strava_activity_handlers_test.go` covers activity handler orchestration and error paths.
+  - `strava_athlete_test.go` covers athlete fetch and athlete handler behavior with local `httptest` servers.
+  - `strava_athlete_smoke_test.go` keeps the optional real Strava smoke test separate.
+  - `test_fakes_test.go` contains shared test fakes for token, raw object, and activity stores.
+- Added route placeholders in `main.go` for separate local-list and sync handlers:
+  - `GET /api/activities` is intended to become the local stored-activities handler.
+  - `/api/activities/sync` is intended to become the request-triggered Strava ingestion handler.
 
 ## Decisions
 
 - Keep normal `go test ./...` infrastructure-free so local and CI runs remain fast and reliable.
+- Treat request-triggered fetching via `GET /api/activities` as sufficient for this feature; background jobs, scheduled sync, or automatic periodic fetching are intentionally out of scope for this slice.
+- Keep `activitiesLocalHandler` and `activitiesSyncHandler` unimplemented for now so they can be written manually as a Go learning exercise.
+- Keep the existing `activitiesHandler` implementation available as a reference for the future sync handler instead of silently wiring it to both routes.
 - Gate Postgres integration tests behind `FORMPATH_DB_TEST=1`.
 - Gate MinIO raw object storage tests behind `FORMPATH_S3_TEST=1`.
 - Use the existing Go test stack and avoid introducing a mocking or container orchestration dependency for now.
@@ -46,8 +63,12 @@ go test ./...
 
 The default test suite passed.
 
+After the later route placeholder change, `go test ./...` is expected to fail until `activitiesLocalHandler` and `activitiesSyncHandler` are implemented.
+
 ## Follow-ups
 
+- Implement `activitiesLocalHandler` to return locally stored activities for the configured app user.
+- Implement `activitiesSyncHandler` to trigger Strava fetch, raw payload storage, canonical mapping, deduplication, and activity listing.
 - Run the opt-in Postgres tests against a disposable database before merging storage-heavy changes.
 - Run the opt-in MinIO test when changing raw object storage behavior.
 - Add one changelog file for each future merged feature or meaningful fix.

@@ -15,26 +15,10 @@ import (
 )
 
 const stravaOAuthStateCookieName = "strava_oauth_state"
-const stravaAPITimeout = 10 * time.Second
 const stravaTokenRefreshWindow = 5 * time.Minute
 
-var stravaHTTPClient = &http.Client{Timeout: stravaAPITimeout}
 var postStravaTokenForm = stravaHTTPClient.PostForm
 var providerTokenStore TokenStore = noopTokenStore{}
-var providerRawObjectStore RawObjectStore = noopRawObjectStore{}
-var providerActivityStore ActivityStore = noopActivityStore{}
-var stravaAPIBaseURL = "https://www.strava.com/api/v3"
-
-type Athlete struct {
-	ID        int64  `json:"id"`
-	Username  string `json:"username"`
-	Firstname string `json:"firstname"`
-	Lastname  string `json:"lastname"`
-	City      string `json:"city"`
-	Country   string `json:"country"`
-	Sex       string `json:"sex"`
-	Premium   bool   `json:"premium"`
-}
 
 type StravaTokenResponse struct {
 	TokenType    string  `json:"token_type"`
@@ -247,111 +231,6 @@ func refreshStravaToken(token ProviderToken) (ProviderToken, error) {
 	refreshed.RefreshToken = tokenResponse.RefreshToken
 	refreshed.ExpiresAt = time.Unix(tokenResponse.ExpiresAt, 0).UTC()
 	return refreshed, nil
-}
-
-func fetchStravaAthlete(accessToken string) (*Athlete, error) {
-	if accessToken == "" {
-		return nil, errors.New("access token is required")
-	}
-
-	req, err := http.NewRequest(
-		http.MethodGet,
-		stravaAPIBaseURL+"/athlete",
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("creating Strava athlete request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := stravaHTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("calling Strava athlete endpoint: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("strava athlete request failed with status %d", resp.StatusCode)
-	}
-
-	var athlete Athlete
-	err = json.NewDecoder(resp.Body).Decode(&athlete)
-	if err != nil {
-		return nil, fmt.Errorf("decoding Strava athlete response: %w", err)
-	}
-	return &athlete, nil
-}
-
-func athleteHandler(w http.ResponseWriter, r *http.Request) {
-	cfg := loadAppConfig()
-	token, err := getValidStravaToken(r.Context(), cfg.AppUserID)
-	if err != nil {
-		http.Error(w, "Strava token is not configured", http.StatusInternalServerError)
-		return
-	}
-
-	athlete, err := fetchStravaAthlete(token.AccessToken)
-	if err != nil {
-		http.Error(w, "failed to fetch Strava athlete", http.StatusBadGateway)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(athlete)
-}
-
-func activitiesHandler(w http.ResponseWriter, r *http.Request) {
-	cfg := loadAppConfig()
-	token, err := getValidStravaToken(r.Context(), cfg.AppUserID)
-	if err != nil {
-		http.Error(w, "Strava token is not configured", http.StatusInternalServerError)
-		return
-	}
-
-	fetchedAt := time.Now().UTC()
-	stravaActivities, rawBody, err := fetchStravaActivities(token.AccessToken)
-	if err != nil {
-		http.Error(w, "failed to fetch Strava activities", http.StatusBadGateway)
-		return
-	}
-
-	rawObjectKey := stravaActivitiesObjectKey(cfg.AppUserID, fetchedAt)
-	err = providerRawObjectStore.SaveRawObject(r.Context(), RawObject{
-		UserID:             cfg.AppUserID,
-		Provider:           "strava",
-		ProviderObjectType: "activity_list",
-		ProviderObjectID:   rawObjectKey,
-		ObjectKey:          rawObjectKey,
-		ContentType:        "application/json",
-		Body:               rawBody,
-		FetchedAt:          fetchedAt,
-	})
-	if err != nil {
-		http.Error(w, "failed to store raw Strava activities", http.StatusInternalServerError)
-		return
-	}
-
-	activities, err := mapStravaActivities(cfg.AppUserID, stravaActivities, rawObjectKey)
-	if err != nil {
-		http.Error(w, "failed to map Strava activities", http.StatusBadGateway)
-		return
-	}
-
-	if err := providerActivityStore.SaveActivities(r.Context(), activities); err != nil {
-		http.Error(w, "failed to store activities", http.StatusInternalServerError)
-		return
-	}
-
-	storedActivities, err := providerActivityStore.ListActivities(r.Context(), cfg.AppUserID)
-	if err != nil {
-		http.Error(w, "failed to list activities", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(storedActivities)
 }
 
 func getValidStravaToken(ctx context.Context, userID string) (ProviderToken, error) {

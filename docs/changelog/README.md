@@ -17,7 +17,7 @@ YYYY-MM-DD-short-change-name.md
 Example:
 
 ```text
-2026-05-17-strava-activity-ingestion-tests.md
+2026-05-17-strava-activity-ingestion.md
 ```
 
 ## Entry Structure

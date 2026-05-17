@@ -25,7 +25,8 @@ func main() {
 	mux.HandleFunc("/auth/strava", authStravaHandler)
 	mux.HandleFunc("/auth/strava/callback", authStravaCallbackHandler)
 	mux.HandleFunc("/athlete", athleteHandler)
-	mux.HandleFunc("/api/activities", activitiesHandler)
+	mux.HandleFunc("/api/activities", activitiesLocalHandler)
+	mux.HandleFunc("/api/activities/sync", activitiesSyncHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
