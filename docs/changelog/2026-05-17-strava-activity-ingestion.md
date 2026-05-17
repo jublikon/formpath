@@ -69,6 +69,7 @@ After the later route placeholder change, `go test ./...` is expected to fail un
 
 - Implement `activitiesLocalHandler` to return locally stored activities for the configured app user.
 - Implement `activitiesSyncHandler` to trigger Strava fetch, raw payload storage, canonical mapping, deduplication, and activity listing.
+- Consider moving Strava-specific code into its own Go package later, for example under `internal/strava`, once the app has clearer package boundaries for domain models, storage interfaces, and handler dependencies. Do not do this as a blind file move, because a subdirectory is a separate Go package and would require explicit exported APIs.
 - Run the opt-in Postgres tests against a disposable database before merging storage-heavy changes.
 - Run the opt-in MinIO test when changing raw object storage behavior.
 - Add one changelog file for each future merged feature or meaningful fix.
