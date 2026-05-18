@@ -23,6 +23,8 @@ Added test coverage and structural cleanup around the first Strava ingestion sli
 - Added normalization tests for Strava activity types such as run, ride, swim, walk, workout, yoga, unknown, and fallback values.
 - Added handler error-path tests for missing tokens, Strava API failures, invalid Strava JSON, raw object storage failure, mapping failure, activity save failure, and activity list failure.
 - Added a regression test that activity fetch errors do not expose token values in HTTP responses.
+- Added typed handling for non-200 Strava activity responses via `HTTPStatusError`, preserving the upstream Strava status code for handler-level decisions.
+- Added explicit handling for Strava `429 Too Many Requests`, returning `429` to the caller instead of collapsing the case into a generic bad gateway response.
 - Added opt-in Postgres integration tests for provider token upsert, activity deduplication, activity listing, and migration idempotency.
 - Added an opt-in MinIO integration test for raw payload storage metadata.
 - Moved persistence startup concerns out of `main.go` into a dedicated database bootstrap path, covering database connection, migrations, token store wiring, and optional MinIO raw object store wiring.
@@ -39,16 +41,17 @@ Added test coverage and structural cleanup around the first Strava ingestion sli
   - `strava_athlete_test.go` covers athlete fetch and athlete handler behavior with local `httptest` servers.
   - `strava_athlete_smoke_test.go` keeps the optional real Strava smoke test separate.
   - `test_fakes_test.go` contains shared test fakes for token, raw object, and activity stores.
-- Added route placeholders in `main.go` for separate local-list and sync handlers:
-  - `GET /api/activities` is intended to become the local stored-activities handler.
-  - `/api/activities/sync` is intended to become the request-triggered Strava ingestion handler.
+- Added separate local-list and sync handlers:
+  - `GET /api/activities` returns locally stored activities.
+  - `POST /api/activities/sync` triggers request-driven Strava ingestion, raw payload storage, canonical mapping, deduplication, and activity listing.
 
 ## Decisions
 
 - Keep normal `go test ./...` infrastructure-free so local and CI runs remain fast and reliable.
-- Treat request-triggered fetching via `GET /api/activities` as sufficient for this feature; background jobs, scheduled sync, or automatic periodic fetching are intentionally out of scope for this slice.
-- Keep `activitiesLocalHandler` and `activitiesSyncHandler` unimplemented for now so they can be written manually as a Go learning exercise.
-- Keep the existing `activitiesHandler` implementation available as a reference for the future sync handler instead of silently wiring it to both routes.
+- Treat request-triggered syncing via `POST /api/activities/sync` as sufficient for this feature; background jobs, scheduled sync, or automatic periodic fetching are intentionally out of scope for this slice.
+- Keep `GET /api/activities` local-only so listing stored activities does not call Strava or consume Strava rate limits.
+- Use method-specific route patterns for activity endpoints so local listing is `GET /api/activities` and sync side effects are triggered through `POST /api/activities/sync`.
+- Use typed errors only for real upstream Strava HTTP responses. Internal errors such as request construction, network failures, response reading, or JSON decoding remain normal Go errors and are mapped to generic gateway failures by the handler.
 - Gate Postgres integration tests behind `FORMPATH_DB_TEST=1`.
 - Gate MinIO raw object storage tests behind `FORMPATH_S3_TEST=1`.
 - Use the existing Go test stack and avoid introducing a mocking or container orchestration dependency for now.
@@ -63,12 +66,8 @@ go test ./...
 
 The default test suite passed.
 
-After the later route placeholder change, `go test ./...` is expected to fail until `activitiesLocalHandler` and `activitiesSyncHandler` are implemented.
-
 ## Follow-ups
 
-- Implement `activitiesLocalHandler` to return locally stored activities for the configured app user.
-- Implement `activitiesSyncHandler` to trigger Strava fetch, raw payload storage, canonical mapping, deduplication, and activity listing.
 - Consider introducing a small activity service layer before implementing more endpoint logic. The HTTP handlers should stay focused on request/response handling, while the service owns local listing and Strava sync orchestration.
 - Consider defining a narrow `StravaClient` interface for the service, for example `FetchActivities(ctx, accessToken)`, so sync logic can depend on an abstraction instead of directly calling global Strava HTTP functions. This would make local-vs-online behavior and tests clearer without introducing a heavy dependency container.
 - Consider moving Strava-specific code into its own Go package later, for example under `internal/strava`, once the app has clearer package boundaries for domain models, storage interfaces, and handler dependencies. Do not do this as a blind file move, because a subdirectory is a separate Go package and would require explicit exported APIs.
