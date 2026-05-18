@@ -77,7 +77,7 @@ func TestActivitiesHandler_FetchesStoresAndReturnsActivities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
@@ -128,7 +128,7 @@ func TestActivitiesHandler_ReturnsErrorWhenTokenIsMissing(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusInternalServerError {
@@ -136,7 +136,7 @@ func TestActivitiesHandler_ReturnsErrorWhenTokenIsMissing(t *testing.T) {
 	}
 }
 
-func TestActivitiesHandler_ReturnsBadGatewayWhenStravaFetchFails(t *testing.T) {
+func TestActivitiesHandler_ReturnsTooManyRequestsWhenStravaRateLimitIsExceeded(t *testing.T) {
 	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
 
 	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -165,11 +165,11 @@ func TestActivitiesHandler_ReturnsBadGatewayWhenStravaFetchFails(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
-	if resp.StatusCode != http.StatusBadGateway {
-		t.Fatalf("Expected status 502 Bad Gateway, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("Expected status 429 Too Many Requests, got %d", resp.StatusCode)
 	}
 }
 
@@ -203,7 +203,7 @@ func TestActivitiesHandler_ReturnsBadGatewayWhenStravaJSONIsInvalid(t *testing.T
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusBadGateway {
@@ -244,7 +244,7 @@ func TestActivitiesHandler_ReturnsErrorWhenRawStoreFails(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusInternalServerError {
@@ -291,7 +291,7 @@ func TestActivitiesHandler_ReturnsBadGatewayWhenMappingFails(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusBadGateway {
@@ -342,7 +342,7 @@ func TestActivitiesHandler_ReturnsErrorWhenActivityStoreSaveFails(t *testing.T) 
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusInternalServerError {
@@ -393,7 +393,7 @@ func TestActivitiesHandler_ReturnsErrorWhenActivityStoreListFails(t *testing.T) 
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusInternalServerError {
@@ -430,7 +430,7 @@ func TestActivitiesHandler_DoesNotExposeTokenWhenStravaFetchFails(t *testing.T) 
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
 
-	activitiesHandler(w, req)
+	activitiesSyncHandler(w, req)
 
 	resp := w.Result()
 	body, err := io.ReadAll(resp.Body)

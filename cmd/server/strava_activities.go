@@ -28,6 +28,19 @@ type StravaActivity struct {
 	Calories           *float64  `json:"calories"`
 }
 
+type HTTPStatusError struct {
+	code int
+	err  error
+}
+
+func (e HTTPStatusError) Error() string {
+	return fmt.Sprintf("HTTP %d: %v", e.code, e.err)
+}
+
+func (e HTTPStatusError) Unwrap() error {
+	return e.err
+}
+
 func fetchStravaActivities(accessToken string) ([]StravaActivity, []byte, error) {
 	if accessToken == "" {
 		return nil, nil, errors.New("access token is required")
@@ -62,7 +75,10 @@ func fetchStravaActivities(accessToken string) ([]StravaActivity, []byte, error)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("Strava activities request failed with status %d", resp.StatusCode)
+		return nil, nil, HTTPStatusError{
+			code: resp.StatusCode,
+			err:  fmt.Errorf("Strava activities request failed with status %d", resp.StatusCode),
+		}
 	}
 
 	var activities []StravaActivity

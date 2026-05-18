@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 )
@@ -9,7 +10,19 @@ import (
 var providerRawObjectStore RawObjectStore = noopRawObjectStore{}
 var providerActivityStore ActivityStore = noopActivityStore{}
 
-func activitiesHandler(w http.ResponseWriter, r *http.Request) {
+func activitiesLocalHandler(w http.ResponseWriter, r *http.Request) {
+	cfg := loadAppConfig()
+	activities, err := providerActivityStore.ListActivities(r.Context(), cfg.AppUserID)
+	if err != nil {
+		http.Error(w, "failed to list activities", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(activities)
+}
+
+func activitiesSyncHandler(w http.ResponseWriter, r *http.Request) {
 	cfg := loadAppConfig()
 	token, err := getValidStravaToken(r.Context(), cfg.AppUserID)
 	if err != nil {
@@ -20,6 +33,17 @@ func activitiesHandler(w http.ResponseWriter, r *http.Request) {
 	fetchedAt := time.Now().UTC()
 	stravaActivities, rawBody, err := fetchStravaActivities(token.AccessToken)
 	if err != nil {
+		var statusErr HTTPStatusError
+		if errors.As(err, &statusErr) {
+			switch statusErr.code {
+			case http.StatusTooManyRequests:
+				http.Error(w, "Strava API rate limit exceeded. Please try again later.", http.StatusTooManyRequests)
+				return
+			case http.StatusUnauthorized:
+				http.Error(w, "Strava token was rejected", http.StatusBadGateway)
+				return
+			}
+		}
 		http.Error(w, "failed to fetch Strava activities", http.StatusBadGateway)
 		return
 	}
