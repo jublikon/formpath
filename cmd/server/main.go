@@ -22,9 +22,9 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
-	mux.HandleFunc("/auth/strava", authStravaHandler)
-	mux.HandleFunc("/auth/strava/callback", authStravaCallbackHandler)
-	mux.HandleFunc("/athlete", athleteHandler)
+	mux.HandleFunc("GET /auth/strava", authStravaHandler)
+	mux.HandleFunc("GET /auth/strava/callback", authStravaCallbackHandler)
+	mux.HandleFunc("GET /athlete", athleteHandler)
 	mux.HandleFunc("GET /api/activities", activitiesLocalHandler)
 	mux.HandleFunc("POST /api/activities/sync", activitiesSyncHandler)
 
