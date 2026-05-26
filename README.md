@@ -1,5 +1,22 @@
 # Formpath
 
+## Project Documentation
+
+Project documentation lives under `docs/`:
+
+- `docs/epics`: product slices and acceptance criteria
+- `docs/adr`: architectural decisions
+- `docs/changelog`: durable project memory for merged changes
+
+Epics and changelogs use matching numbers and slugs so they can be paired by filename:
+
+```text
+docs/epics/001-strava-activity-ingestion.md
+docs/changelog/001-strava-activity-ingestion.md
+```
+
+ADRs are linked through frontmatter and explicit `Related ADRs` sections, because one epic or changelog can relate to multiple decisions.
+
 ## Local Development
 
 Prerequisite: install a local container runtime that supports Docker Compose, for example Docker Desktop, OrbStack, or Colima.
@@ -20,9 +37,9 @@ Services:
 
 - Backend: http://localhost:8080
 - Postgres: localhost:5432
-- MinIO API: http://localhost:9000
-- MinIO Console: http://localhost:9001
+- [MinIO](https://www.min.io/) API: http://localhost:9000
+- [MinIO](https://www.min.io/) Console: http://localhost:9001
 
-OAuth user tokens are stored in Postgres. Raw provider payloads are stored in MinIO, with object metadata and canonical records in Postgres.
+OAuth user tokens are stored in Postgres. Raw provider payloads are stored in [MinIO](https://www.min.io/), with object metadata and canonical records in Postgres.
 
 When the backend runs inside Compose, `docker-compose.yml` overrides `DATABASE_URL` and `S3_ENDPOINT` to use service names. When the backend runs directly with `go run ./cmd/server`, the `.env.example` localhost values are the right shape.
