@@ -1,5 +1,22 @@
 # Formpath
 
+## Project Documentation
+
+Project documentation lives under `docs/`:
+
+- `docs/epics`: product slices and acceptance criteria
+- `docs/adr`: architectural decisions
+- `docs/changelog`: durable project memory for merged changes
+
+Epics and changelogs use matching numbers and slugs so they can be paired by filename:
+
+```text
+docs/epics/001-strava-activity-ingestion.md
+docs/changelog/001-strava-activity-ingestion.md
+```
+
+ADRs are linked through frontmatter and explicit `Related ADRs` sections, because one epic or changelog can relate to multiple decisions.
+
 ## Local Development
 
 Prerequisite: install a local container runtime that supports Docker Compose, for example Docker Desktop, OrbStack, or Colima.
