@@ -71,6 +71,7 @@ Added test coverage and structural cleanup around the first Strava ingestion sli
 
 - Keep normal `go test ./...` infrastructure-free so local and CI runs remain fast and reliable.
 - Treat request-triggered syncing via `POST /api/activities/sync` as sufficient for this feature; background jobs, scheduled sync, or automatic periodic fetching are intentionally out of scope for this slice.
+- Fetch only the first Strava activity page (`page=1`, `per_page=200`) for this slice. Do not store an incremental sync cursor or send an `after` timestamp yet; historical pagination and incremental sync are deferred follow-ups.
 - Keep `GET /api/activities` local-only so listing stored activities does not call Strava or consume Strava rate limits.
 - Use method-specific route patterns for activity endpoints so local listing is `GET /api/activities` and sync side effects are triggered through `POST /api/activities/sync`.
 - Use typed errors only for real upstream Strava HTTP responses. Internal errors such as request construction, network failures, response reading, or JSON decoding remain normal Go errors and are mapped to generic gateway failures by the handler.
