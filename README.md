@@ -37,9 +37,9 @@ Services:
 
 - Backend: http://localhost:8080
 - Postgres: localhost:5432
-- MinIO API: http://localhost:9000
-- MinIO Console: http://localhost:9001
+- [MinIO](https://www.min.io/) API: http://localhost:9000
+- [MinIO](https://www.min.io/) Console: http://localhost:9001
 
-OAuth user tokens are stored in Postgres. Raw provider payloads are stored in MinIO, with object metadata and canonical records in Postgres.
+OAuth user tokens are stored in Postgres. Raw provider payloads are stored in [MinIO](https://www.min.io/), with object metadata and canonical records in Postgres.
 
 When the backend runs inside Compose, `docker-compose.yml` overrides `DATABASE_URL` and `S3_ENDPOINT` to use service names. When the backend runs directly with `go run ./cmd/server`, the `.env.example` localhost values are the right shape.
