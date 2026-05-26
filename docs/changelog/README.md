@@ -11,23 +11,51 @@ Entries should be self-contained. Do not rely on private chat history or memory 
 Use this format:
 
 ```text
-YYYY-MM-DD-short-change-name.md
+NNN-short-change-name.md
 ```
 
 Example:
 
 ```text
-2026-05-17-strava-activity-ingestion.md
+001-strava-activity-ingestion.md
 ```
+
+The number and slug should match the primary epic when the changelog records work for a single epic:
+
+```text
+docs/epics/001-strava-activity-ingestion.md
+docs/changelog/001-strava-activity-ingestion.md
+```
+
+The date belongs in the changelog content only when it is relevant to the change history. It is not part of the filename.
 
 ## Entry Structure
 
 ```markdown
-# YYYY-MM-DD: Change Title
+---
+id: changelog-001
+number: 1
+slug: strava-activity-ingestion
+related_epics:
+  - epic-001
+related_adrs:
+  - ADR-001
+  - ADR-002
+---
+
+# Changelog 001: Change Title
 
 ## Summary
 
 Short description of what changed and why.
+
+## Related Epics
+
+- Links to the epic or epics this changelog belongs to
+
+## Related ADRs
+
+- ADRs that materially informed this change
 
 ## Relevant Changes
 

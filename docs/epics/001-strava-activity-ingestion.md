@@ -1,3 +1,15 @@
+---
+id: epic-001
+number: 1
+slug: strava-activity-ingestion
+related_adrs:
+  - ADR-001
+  - ADR-002
+  - ADR-003
+related_changelogs:
+  - changelog-001
+---
+
 # Epic 001: Fetch and Store Strava Activities Locally
 
 ## Goal

@@ -1,4 +1,16 @@
-# 2026-05-17: Strava Activity Ingestion Tests
+---
+id: changelog-001
+number: 1
+slug: strava-activity-ingestion
+related_epics:
+  - epic-001
+related_adrs:
+  - ADR-001
+  - ADR-002
+  - ADR-003
+---
+
+# Changelog 001: Strava Activity Ingestion Tests
 
 ## Summary
 
@@ -9,6 +21,16 @@ Added test coverage and structural cleanup around the first Strava ingestion sli
 - Product and epic context came from the repository documentation in `docs/product`, `docs/epics`, and `docs/adr`.
 - Implementation context came from the current Go backend under `cmd/server`.
 - Any decisions from conversation should be captured here explicitly, because the changelog is intended to become the durable project memory.
+
+## Related Epics
+
+- [Epic 001: Fetch and Store Strava Activities Locally](../epics/001-strava-activity-ingestion.md)
+
+## Related ADRs
+
+- [ADR-001: Go as Backend Language](../adr/001-go-backend-language.md)
+- [ADR-002: Strava OAuth2 Flow](../adr/002-strava-first-provider-oauth2.md)
+- [ADR-003: Postgres + Token Storage](../adr/003-postgres-local-first-token-storage.md)
 
 ## Relevant Changes
 
