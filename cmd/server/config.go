@@ -9,6 +9,7 @@ const defaultLocalUserID = "00000000-0000-0000-0000-000000000001"
 
 type appConfig struct {
 	DatabaseURL       string
+	FrontendURL       string
 	AppUserID         string
 	StravaRedirectURL string
 	StravaScopes      string
@@ -22,6 +23,7 @@ type appConfig struct {
 func loadAppConfig() appConfig {
 	return appConfig{
 		DatabaseURL:       os.Getenv("DATABASE_URL"),
+		FrontendURL:       envOrDefault("FRONTEND_URL", "http://localhost:5173"),
 		AppUserID:         envOrDefault("APP_USER_ID", defaultLocalUserID),
 		StravaRedirectURL: envOrDefault("STRAVA_REDIRECT_URL", "http://localhost:8080/auth/strava/callback"),
 		StravaScopes:      envOrDefault("STRAVA_SCOPES", "activity:read_all"),

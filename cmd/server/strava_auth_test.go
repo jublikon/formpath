@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -174,6 +173,7 @@ func TestAuthStravaCallbackHandler_Success(t *testing.T) {
 	t.Setenv("STRAVA_CLIENT_SECRET", "test-client-secret")
 	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
 	t.Setenv("STRAVA_SCOPES", "activity:read_all")
+	t.Setenv("FRONTEND_URL", "http://localhost:5173")
 
 	originalPostStravaTokenForm := postStravaTokenForm
 	originalProviderTokenStore := providerTokenStore
@@ -232,29 +232,12 @@ func TestAuthStravaCallbackHandler_Success(t *testing.T) {
 	authStravaCallbackHandler(w, req)
 
 	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200 OK, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("Expected status 302 Found, got %d", resp.StatusCode)
 	}
 
-	var response struct {
-		Status    string `json:"status"`
-		ExpiresAt int64  `json:"expires_at"`
-		AthleteID int64  `json:"athlete_id"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("Failed to decode response body: %v", err)
-	}
-
-	if response.Status != "connected" {
-		t.Fatalf("Expected status connected, got %q", response.Status)
-	}
-
-	if response.ExpiresAt != 1234567890 {
-		t.Fatalf("Expected expires_at 1234567890, got %d", response.ExpiresAt)
-	}
-
-	if response.AthleteID != 42 {
-		t.Fatalf("Expected athlete_id 42, got %d", response.AthleteID)
+	if location := resp.Header.Get("Location"); location != "http://localhost:5173?strava=connected" {
+		t.Fatalf("Expected redirect to frontend, got %q", location)
 	}
 
 	if tokenStore.token.UserID != "00000000-0000-0000-0000-000000000042" {
@@ -279,6 +262,34 @@ func TestAuthStravaCallbackHandler_Success(t *testing.T) {
 
 	if tokenStore.token.Scopes != "activity:read_all" {
 		t.Fatalf("Expected stored scope activity:read_all, got %q", tokenStore.token.Scopes)
+	}
+}
+
+func TestFrontendStravaStatusURL_PreservesExistingPathAndQuery(t *testing.T) {
+	redirectURL, err := frontendStravaStatusURL("http://localhost:5173/app?source=formpath", "connected")
+	if err != nil {
+		t.Fatalf("Expected redirect URL, got error: %v", err)
+	}
+
+	parsed, err := url.Parse(redirectURL)
+	if err != nil {
+		t.Fatalf("Invalid redirect URL %q: %v", redirectURL, err)
+	}
+
+	if parsed.Scheme != "http" {
+		t.Fatalf("Expected scheme http, got %q", parsed.Scheme)
+	}
+	if parsed.Host != "localhost:5173" {
+		t.Fatalf("Expected host localhost:5173, got %q", parsed.Host)
+	}
+	if parsed.Path != "/app" {
+		t.Fatalf("Expected path /app, got %q", parsed.Path)
+	}
+	if parsed.Query().Get("source") != "formpath" {
+		t.Fatalf("Expected source query formpath, got %q", parsed.Query().Get("source"))
+	}
+	if parsed.Query().Get("strava") != "connected" {
+		t.Fatalf("Expected strava query connected, got %q", parsed.Query().Get("strava"))
 	}
 }
 
