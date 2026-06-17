@@ -23,6 +23,61 @@ header h1 {
   line-height: 1.15;
 }
 
+.integration-bar {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #d9dfdd;
+  border-radius: 8px;
+}
+
+.integration-label {
+  margin: 0 0 4px;
+  color: #397368;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.integration-copy {
+  margin: 0;
+  color: #3f4b48;
+  font-size: 15px;
+}
+
+.primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  color: #ffffff;
+  background: #397368;
+  border: 1px solid #397368;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.primary-action:hover {
+  background: #2f6158;
+  border-color: #2f6158;
+}
+
+.primary-action:disabled {
+  color: #7b8784;
+  background: #eef2f1;
+  border-color: #d9dfdd;
+  cursor: not-allowed;
+}
+
 .status {
   margin: 0;
   padding: 20px 24px;
@@ -36,6 +91,13 @@ header h1 {
   color: #8b2f2f;
   background: #fff7f7;
   border-color: #e3bcbc;
+}
+
+.status-success {
+  margin-bottom: 16px;
+  color: #276053;
+  background: #f1faf7;
+  border-color: #b9ddd3;
 }
 
 .activity-list {
@@ -109,6 +171,15 @@ header h1 {
   .activity {
     grid-template-columns: 1fr;
     gap: 20px;
+  }
+
+  .integration-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .primary-action {
+    width: 100%;
   }
 
   .activity dl {

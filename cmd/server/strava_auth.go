@@ -172,18 +172,25 @@ func authStravaCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := struct {
-		Status    string `json:"status"`
-		ExpiresAt int64  `json:"expires_at"`
-		AthleteID int64  `json:"athlete_id"`
-	}{
-		Status:    "connected",
-		ExpiresAt: tokenResponse.ExpiresAt,
-		AthleteID: tokenResponse.Athlete.ID,
+	redirectURL, err := frontendStravaStatusURL(cfg.FrontendURL, "connected")
+	if err != nil {
+		http.Error(w, "failed to build frontend redirect URL", http.StatusInternalServerError)
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+func frontendStravaStatusURL(frontendURL string, status string) (string, error) {
+	u, err := url.Parse(frontendURL)
+	if err != nil {
+		return "", fmt.Errorf("parsing frontend URL: %w", err)
+	}
+
+	query := u.Query()
+	query.Set("strava", status)
+	u.RawQuery = query.Encode()
+	return u.String(), nil
 }
 
 func refreshStravaToken(token ProviderToken) (ProviderToken, error) {

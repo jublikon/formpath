@@ -10,22 +10,51 @@ type Activity = {
   duration_seconds: number
 }
 
+type StravaIntegration = {
+  provider: 'strava'
+  connected: boolean
+}
+
 function App() {
   const [activities, setActivities] = useState<Activity[]>([])
+  const [stravaIntegration, setStravaIntegration] =
+    useState<StravaIntegration | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [stravaStatus] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('strava')
+  })
 
   useEffect(() => {
-    async function loadActivities() {
+    async function loadInitialData() {
       try {
-        const response = await fetch('/api/activities')
+        const [activitiesResponse, integrationResponse] = await Promise.all([
+          fetch('/api/activities'),
+          fetch('/api/integrations/strava'),
+        ])
 
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`)
+        if (!activitiesResponse.ok) {
+          throw new Error(
+            `Activities request failed with status ${activitiesResponse.status}`,
+          )
         }
 
-        const data: Activity[] | null = await response.json()
-        setActivities(data ?? [])
+        if (!integrationResponse.ok) {
+          throw new Error(
+            `Strava integration request failed with status ${integrationResponse.status}`,
+          )
+        }
+
+        const activitiesData: Activity[] | null =
+          await activitiesResponse.json()
+        const integrationData: StravaIntegration =
+          await integrationResponse.json()
+
+        setActivities(activitiesData ?? [])
+        setStravaIntegration(integrationData)
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'An unknown error occurred'
@@ -35,8 +64,42 @@ function App() {
       }
     }
 
-    loadActivities()
+    loadInitialData()
   }, [])
+
+  useEffect(() => {
+    if (!stravaStatus) {
+      return
+    }
+
+    const url = new URL(window.location.href)
+    url.searchParams.delete('strava')
+    window.history.replaceState({}, '', url)
+  }, [stravaStatus])
+
+  async function syncActivities() {
+    setIsSyncing(true)
+    setSyncError(null)
+
+    try {
+      const response = await fetch('/api/activities/sync', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error(`Sync request failed with status ${response.status}`)
+      }
+
+      const data: Activity[] | null = await response.json()
+      setActivities(data ?? [])
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'An unknown error occurred'
+      setSyncError(message)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   return (
     <main>
@@ -44,6 +107,46 @@ function App() {
         <p>Formpath</p>
         <h1>Activities</h1>
       </header>
+
+      {stravaStatus === 'connected' && (
+        <p className="status status-success">Strava connected successfully.</p>
+      )}
+
+      {!isLoading && !error && stravaIntegration && (
+        <section className="integration-bar" aria-label="Strava integration">
+          <div>
+            <p className="integration-label">Strava</p>
+            {stravaIntegration.connected ? (
+              <p className="integration-copy">Connected and ready to sync.</p>
+            ) : (
+              <p className="integration-copy">
+                Connect Strava to sync your activities.
+              </p>
+            )}
+          </div>
+
+          {stravaIntegration.connected ? (
+            <button
+              className="primary-action"
+              type="button"
+              disabled={isSyncing}
+              onClick={syncActivities}
+            >
+              {isSyncing ? 'Syncing...' : 'Sync activities'}
+            </button>
+          ) : (
+            <a className="primary-action" href="/auth/strava">
+              Connect with Strava
+            </a>
+          )}
+        </section>
+      )}
+
+      {syncError && (
+        <p className="status status-error">
+          Could not sync activities: {syncError}
+        </p>
+      )}
 
       {isLoading && <p className="status">Loading activities...</p>}
 
