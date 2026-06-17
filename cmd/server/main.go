@@ -25,6 +25,7 @@ func main() {
 	mux.HandleFunc("GET /auth/strava", authStravaHandler)
 	mux.HandleFunc("GET /auth/strava/callback", authStravaCallbackHandler)
 	mux.HandleFunc("GET /athlete", athleteHandler)
+	mux.HandleFunc("GET /api/integrations/strava", stravaIntegrationHandler)
 	mux.HandleFunc("GET /api/activities", activitiesLocalHandler)
 	mux.HandleFunc("POST /api/activities/sync", activitiesSyncHandler)
 
