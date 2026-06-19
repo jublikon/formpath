@@ -231,11 +231,24 @@ header h1 {
 }
 
 .chart-labels {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 2px;
+  position: relative;
+  height: 14px;
   color: #6d7875;
   font-size: 12px;
+}
+
+.chart-label {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.chart-label-1 {
+  transform: translateX(-50%);
+}
+
+.chart-label-2 {
+  transform: translateX(-100%);
 }
 
 .visually-hidden {

@@ -37,7 +37,12 @@ export function TrainingVolumeChart({
     width: chartWidth,
     height: chartHeight,
   })
-  const middleDay = days[Math.floor(days.length / 2)]
+  const middleIndex = Math.floor(days.length / 2)
+  const labelPoints = [
+    chart.points[0],
+    chart.points[middleIndex],
+    chart.points.at(-1),
+  ]
   const description =
     chart.maxMovingSeconds === 0
       ? 'No moving time was recorded during this period.'
@@ -102,9 +107,17 @@ export function TrainingVolumeChart({
       </svg>
 
       <div className="chart-labels" aria-hidden="true">
-        <span>{days[0] ? formatChartDate(days[0].date) : ''}</span>
-        <span>{middleDay ? formatChartDate(middleDay.date) : ''}</span>
-        <span>{days.at(-1) ? formatChartDate(days.at(-1)!.date) : ''}</span>
+        {labelPoints.map((point, index) => (
+          <span
+            className={`chart-label chart-label-${index}`}
+            key={point?.date ?? index}
+            style={{
+              left: point ? `${(point.x / chartWidth) * 100}%` : '0%',
+            }}
+          >
+            {point ? formatChartDate(point.date) : ''}
+          </span>
+        ))}
       </div>
 
       <ul className="visually-hidden">

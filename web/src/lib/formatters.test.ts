@@ -58,6 +58,10 @@ describe('formatActivityType', () => {
   it('uses readable names for known canonical activity types', () => {
     expect(formatActivityType('run')).toBe('Run')
     expect(formatActivityType('ride')).toBe('Ride')
+    expect(formatActivityType('alpineski')).toBe('Alpine ski')
+    expect(formatActivityType('backcountryski')).toBe('Backcountry ski')
+    expect(formatActivityType('standuppaddling')).toBe('Stand-up paddling')
+    expect(formatActivityType('rockclimbing')).toBe('Rock climbing')
   })
 
   it('turns an unknown machine-readable type into readable text', () => {
