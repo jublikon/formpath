@@ -8,14 +8,18 @@ Project documentation lives under `docs/`:
 - `docs/adr`: architectural decisions
 - `docs/changelog`: durable project memory for merged changes
 
-Epics and changelogs use matching numbers and slugs so they can be paired by filename:
+Epics and changelogs have independent chronological numbering. Their
+relationships are recorded explicitly in frontmatter:
 
 ```text
 docs/epics/001-strava-activity-ingestion.md
-docs/changelog/001-strava-activity-ingestion.md
+docs/changelog/001-strava-activity-ingestion.md  -> related_epics: [epic-001]
+docs/epics/002-training-overview.md
+docs/changelog/003-training-overview.md          -> related_epics: [epic-002]
 ```
 
-ADRs are linked through frontmatter and explicit `Related ADRs` sections, because one epic or changelog can relate to multiple decisions.
+ADRs are linked the same way, because an epic or changelog can relate to
+multiple architectural decisions.
 
 ## Local Development
 

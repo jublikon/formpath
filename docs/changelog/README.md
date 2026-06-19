@@ -20,14 +20,31 @@ Example:
 001-strava-activity-ingestion.md
 ```
 
-The number and slug should match the primary epic when the changelog records work for a single epic:
+Changelogs and epics use independent chronological numbering:
 
 ```text
 docs/epics/001-strava-activity-ingestion.md
 docs/changelog/001-strava-activity-ingestion.md
+docs/changelog/002-basic-react-activity-ui.md
+docs/epics/002-training-overview.md
+docs/changelog/003-training-overview.md
 ```
 
-The date belongs in the changelog content only when it is relevant to the change history. It is not part of the filename.
+The relationship between documents is expressed through frontmatter IDs, not
+through matching numbers or filenames:
+
+```yaml
+# docs/changelog/003-training-overview.md
+related_epics:
+  - epic-002
+related_adrs: []
+```
+
+This allows one epic to result in multiple changelogs, one changelog to relate
+to multiple epics, and changes to exist without an ADR.
+
+The date belongs in the changelog content only when it is relevant to the
+change history. It is not part of the filename.
 
 ## Entry Structure
 
