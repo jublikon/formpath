@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-
-type Activity = {
-  id: string
-  name: string
-  activity_type: string
-  started_at: string
-  distance_meters: number
-  duration_seconds: number
-}
+import { IntegrationPanel } from './components/IntegrationPanel'
+import { Metric } from './components/Metric'
+import { RecentActivities } from './components/RecentActivities'
+import { TrainingVolumeChart } from './components/TrainingVolumeChart'
+import {
+  formatDistance,
+  formatDuration,
+  formatElevation,
+  formatPeriod,
+} from './lib/formatters'
+import { buildTrainingOverview } from './lib/trainingOverview'
+import type { Activity } from './types/activity'
 
 type StravaIntegration = {
   provider: 'strava'
@@ -55,10 +58,10 @@ function App() {
 
         setActivities(activitiesData ?? [])
         setStravaIntegration(integrationData)
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'An unknown error occurred'
-        setError(message)
+      } catch {
+        setError(
+          "We couldn't load your training data. Please refresh the page.",
+        )
       } finally {
         setIsLoading(false)
       }
@@ -92,98 +95,127 @@ function App() {
 
       const data: Activity[] | null = await response.json()
       setActivities(data ?? [])
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'An unknown error occurred'
-      setSyncError(message)
+    } catch {
+      setSyncError(
+        "We couldn't sync Strava right now. Your existing activities are still available.",
+      )
     } finally {
       setIsSyncing(false)
     }
   }
 
+  const overview = buildTrainingOverview(activities, new Date())
+  const hasActivities = activities.length > 0
+  const isConnected = stravaIntegration?.connected === true
+  const hasLoaded = !isLoading && !error
+
   return (
     <main>
       <header>
         <p>Formpath</p>
-        <h1>Activities</h1>
+        <h1>Training overview</h1>
       </header>
 
       {stravaStatus === 'connected' && (
-        <p className="status status-success">Strava connected successfully.</p>
-      )}
-
-      {!isLoading && !error && stravaIntegration && (
-        <section className="integration-bar" aria-label="Strava integration">
-          <div>
-            <p className="integration-label">Strava</p>
-            {stravaIntegration.connected ? (
-              <p className="integration-copy">Connected and ready to sync.</p>
-            ) : (
-              <p className="integration-copy">
-                Connect Strava to sync your activities.
-              </p>
-            )}
-          </div>
-
-          {stravaIntegration.connected ? (
-            <button
-              className="primary-action"
-              type="button"
-              disabled={isSyncing}
-              onClick={syncActivities}
-            >
-              {isSyncing ? 'Syncing...' : 'Sync activities'}
-            </button>
-          ) : (
-            <a className="primary-action" href="/auth/strava">
-              Connect with Strava
-            </a>
-          )}
-        </section>
-      )}
-
-      {syncError && (
-        <p className="status status-error">
-          Could not sync activities: {syncError}
+        <p className="status status-success" role="status">
+          Strava connected successfully.
         </p>
       )}
 
-      {isLoading && <p className="status">Loading activities...</p>}
+      {isLoading && (
+        <p className="status" role="status">
+          Loading your training data...
+        </p>
+      )}
 
       {error && (
-        <p className="status status-error">Could not load activities: {error}</p>
+        <p className="status status-error" role="alert">
+          {error}
+        </p>
       )}
 
-      {!isLoading && !error && activities.length === 0 && (
-        <p className="status">No activities found.</p>
+      {hasLoaded && stravaIntegration && (
+        <IntegrationPanel
+          connected={isConnected}
+          syncing={isSyncing}
+          hasActivities={hasActivities}
+          onSync={syncActivities}
+        />
       )}
 
-      {!isLoading && !error && activities.length > 0 && (
-        <ul className="activity-list">
-          {activities.map((activity) => (
-            <li className="activity" key={activity.id}>
+      {syncError && (
+        <p className="status status-error" role="alert">
+          {syncError}
+        </p>
+      )}
+
+      {hasLoaded && hasActivities && (
+        <>
+          <section
+            className="overview-summary"
+            aria-labelledby="overview-heading"
+          >
+            <div className="section-heading">
               <div>
-                <h2>{activity.name}</h2>
-                <p>{activity.activity_type}</p>
+                <p className="section-eyebrow">Last 28 days</p>
+                <h2 id="overview-heading">Your training at a glance</h2>
               </div>
+              <p className="period">
+                {formatPeriod(
+                  overview.period.startDate,
+                  overview.period.endDate,
+                )}
+              </p>
+            </div>
 
-              <dl>
-                <div>
-                  <dt>Date</dt>
-                  <dd>{activity.started_at}</dd>
-                </div>
-                <div>
-                  <dt>Distance</dt>
-                  <dd>{activity.distance_meters} m</dd>
-                </div>
-                <div>
-                  <dt>Duration</dt>
-                  <dd>{activity.duration_seconds} s</dd>
-                </div>
-              </dl>
-            </li>
-          ))}
-        </ul>
+            <dl className="metric-grid">
+              <Metric
+                label="Activities"
+                value={new Intl.NumberFormat('en-US').format(
+                  overview.totals.activityCount,
+                )}
+              />
+              <Metric
+                label="Distance"
+                value={formatDistance(overview.totals.distanceMeters)}
+              />
+              <Metric
+                label="Moving time"
+                value={formatDuration(overview.totals.movingSeconds)}
+              />
+              <Metric
+                label="Elevation"
+                value={formatElevation(overview.totals.elevationGainMeters)}
+              />
+            </dl>
+          </section>
+
+          <TrainingVolumeChart
+            days={overview.days}
+            startDate={overview.period.startDate}
+            endDate={overview.period.endDate}
+          />
+
+          <RecentActivities activities={activities} />
+        </>
+      )}
+
+      {hasLoaded && !hasActivities && (
+        <section className="empty-state" aria-labelledby="empty-state-heading">
+          <p className="section-eyebrow">
+            {isConnected ? 'Ready to sync' : 'Get started'}
+          </p>
+          <h2 id="empty-state-heading">
+            {isConnected
+              ? 'Build your first training overview'
+              : 'Connect your training data'}
+          </h2>
+          <p>
+            {isConnected
+              ? 'Use the sync action above to import your Strava activities.'
+              : 'Connect Strava above to import activities and see your recent training volume.'}
+          </p>
+        </section>
       )}
     </main>
   )

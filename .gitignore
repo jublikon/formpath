@@ -7,6 +7,9 @@ bin/
 *.test
 coverage.out
 
+# Frontend build and tool caches
+web/.vite/
+
 # Local editor and OS files
 .DS_Store
 .idea/
