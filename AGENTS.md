@@ -82,6 +82,8 @@ Formpath is a local-first training application for ambitious recreational athlet
 - Prefer small, reviewable diffs and avoid broad cleanup unrelated to the task.
 - Preserve existing conventions and user changes.
 - Validate incrementally and report commands that were actually run.
+- Never use `codex`, `claude`, or another coding-agent name in a branch name unless the user explicitly requests it.
+- Keep project history tool-neutral. Commit messages, pull request titles and descriptions, changelogs, and similar records must describe the change without stating or implying that a coding agent created it.
 
 ## Traceability
 
