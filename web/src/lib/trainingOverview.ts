@@ -5,6 +5,9 @@ const overviewDayCount = 28
 export type TrainingDay = {
   date: string
   movingSeconds: number
+  runDistanceMeters: number
+  rideDistanceMeters: number
+  workoutMovingSeconds: number
 }
 
 export type TrainingOverview = {
@@ -48,6 +51,9 @@ export function buildTrainingOverview(
   const days = Array.from({ length: overviewDayCount }, (_, index) => ({
     date: localDateKey(addLocalDays(periodStart, index)),
     movingSeconds: 0,
+    runDistanceMeters: 0,
+    rideDistanceMeters: 0,
+    workoutMovingSeconds: 0,
   }))
   const daysByDate = new Map(days.map((day) => [day.date, day]))
 
@@ -72,6 +78,18 @@ export function buildTrainingOverview(
     distanceMeters += activity.distance_meters
     movingSeconds += activity.moving_seconds
     day.movingSeconds += activity.moving_seconds
+
+    switch (activity.activity_type.trim().toLowerCase()) {
+      case 'run':
+        day.runDistanceMeters += activity.distance_meters
+        break
+      case 'ride':
+        day.rideDistanceMeters += activity.distance_meters
+        break
+      case 'workout':
+        day.workoutMovingSeconds += activity.moving_seconds
+        break
+    }
 
     if (activity.elevation_gain_meters !== undefined) {
       elevationGainMeters += activity.elevation_gain_meters

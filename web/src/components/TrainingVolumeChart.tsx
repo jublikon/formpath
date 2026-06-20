@@ -33,7 +33,11 @@ export function TrainingVolumeChart({
   startDate,
   endDate,
 }: TrainingVolumeChartProps) {
-  const chart = buildTrainingChart(days, {
+  const values = days.map((day) => ({
+    date: day.date,
+    value: day.movingSeconds,
+  }))
+  const chart = buildTrainingChart(values, {
     width: chartWidth,
     height: chartHeight,
   })
@@ -44,9 +48,9 @@ export function TrainingVolumeChart({
     chart.points.at(-1),
   ]
   const description =
-    chart.maxMovingSeconds === 0
+    chart.maxValue === 0
       ? 'No moving time was recorded during this period.'
-      : `The highest daily moving time was ${formatDuration(chart.maxMovingSeconds)}.`
+      : `The highest daily moving time was ${formatDuration(chart.maxValue)}.`
 
   return (
     <section className="training-chart-card" aria-labelledby="chart-heading">

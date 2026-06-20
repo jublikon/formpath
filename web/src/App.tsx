@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import { ActivityTypeCharts } from './components/ActivityTypeCharts'
 import { IntegrationPanel } from './components/IntegrationPanel'
 import { Metric } from './components/Metric'
 import { RecentActivities } from './components/RecentActivities'
@@ -191,6 +192,12 @@ function App() {
           </section>
 
           <TrainingVolumeChart
+            days={overview.days}
+            startDate={overview.period.startDate}
+            endDate={overview.period.endDate}
+          />
+
+          <ActivityTypeCharts
             days={overview.days}
             startDate={overview.period.startDate}
             endDate={overview.period.endDate}

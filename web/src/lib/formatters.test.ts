@@ -5,6 +5,7 @@ import {
   formatDistance,
   formatDuration,
   formatElevation,
+  formatKilometers,
   formatPeriod,
 } from './formatters'
 
@@ -19,6 +20,14 @@ describe('formatDistance', () => {
 
   it('formats shorter distances as rounded meters', () => {
     expect(formatDistance(842.4, 'de-DE')).toBe('842 m')
+  })
+})
+
+describe('formatKilometers', () => {
+  it('always formats a distance in kilometers', () => {
+    expect(formatKilometers(0)).toBe('0 km')
+    expect(formatKilometers(850)).toBe('0.9 km')
+    expect(formatKilometers(12400, 'de-DE')).toBe('12,4 km')
   })
 })
 
