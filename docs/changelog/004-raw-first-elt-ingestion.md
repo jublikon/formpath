@@ -41,8 +41,9 @@ validation, or canonical normalization occurs.
   back.
 - Require complete S3 configuration at backend startup whenever Postgres
   persistence is configured.
-- Remove a newly uploaded raw object when its metadata cannot be recorded in
-  Postgres.
+- Preserve a newly uploaded raw object when its metadata cannot be recorded in
+  Postgres, prioritizing source-data retention over immediate catalog
+  consistency.
 - Verify loaded raw bytes against their catalogued SHA-256 checksum before
   transformation.
 - Added tests proving that transformation uses the stored payload rather than
@@ -57,6 +58,9 @@ validation, or canonical normalization occurs.
   behavior remain unchanged.
 - Treat raw provider objects as the durable source of truth and canonical
   activities as derived records.
+- Do not delete successfully extracted raw data to compensate for a Postgres
+  metadata failure. Such objects remain uncatalogued until a later
+  reconciliation workflow.
 - Keep provider-specific simplification, including cycling variants mapped to
   `ride`, in the transform step rather than the extract or load steps.
 - Do not introduce background jobs, transformation versions, or a bulk
@@ -68,8 +72,8 @@ validation, or canonical normalization occurs.
 - `go test ./...` passed.
 - The opt-in MinIO/Postgres raw object integration test passed against the
   local Compose stack, including unchanged object retrieval.
-- The integration suite covers compensation after metadata failure and
-  checksum mismatch rejection.
+- The integration suite covers raw-object preservation after metadata failure
+  and checksum mismatch rejection.
 - `git diff --check` passed.
 
 ## Follow-ups
@@ -78,3 +82,5 @@ validation, or canonical normalization occurs.
   objects without contacting the provider.
 - Add transformation version metadata when multiple mapping versions need to
   coexist or be audited.
+- Introduce a `pending`/`ready` ingestion-state model and reconciliation for
+  uploaded raw objects whose metadata was not finalized.

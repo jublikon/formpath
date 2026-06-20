@@ -52,3 +52,7 @@ When `DATABASE_URL` is configured, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, and
 `S3_SECRET_ACCESS_KEY` are also required. The backend validates this raw-storage
 dependency during startup because canonical ingestion transforms only persisted
 raw objects.
+
+If an upload succeeds but its Postgres metadata write fails, the raw object is
+kept in MinIO to avoid losing extracted provider data. It is not transformed
+until a future reconciliation workflow catalogs it.

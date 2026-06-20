@@ -50,7 +50,10 @@ responses remain request failures and are not treated as provider data.
 - Invalid or currently unsupported provider payloads remain stored even when
   transformation fails.
 - If raw object metadata cannot be recorded after an upload, the uploaded
-  object is removed so it does not become an uncatalogued orphan.
+  object is deliberately preserved. Retaining successfully extracted source
+  data takes priority over keeping the bucket perfectly catalogued.
+- Preserved objects without metadata are not transformed until a future
+  reconciliation workflow catalogs them.
 - A checksum mismatch prevents transformation and canonical persistence.
 - Canonical tables contain derived data and can be rebuilt from raw objects
   when a reprocessing workflow is introduced.
@@ -59,3 +62,6 @@ responses remain request failures and are not treated as provider data.
   persistence still complete within one request.
 - Background transformation, transformation versioning, and bulk reprocessing
   are deferred until product or operational needs justify them.
+- A future ingestion-state model can create metadata as `pending` before
+  upload, finalize it as `ready` afterwards, and reconcile interrupted
+  operations.

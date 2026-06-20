@@ -263,7 +263,7 @@ func TestMinIORawObjectStore_SaveRawObjectRecordsMetadata(t *testing.T) {
 	}
 }
 
-func TestMinIORawObjectStore_RemovesObjectWhenMetadataWriteFails(t *testing.T) {
+func TestMinIORawObjectStore_PreservesObjectWhenMetadataWriteFails(t *testing.T) {
 	if os.Getenv("FORMPATH_S3_TEST") != "1" {
 		t.Skip("set FORMPATH_S3_TEST=1 to run MinIO integration tests")
 	}
@@ -295,11 +295,8 @@ func TestMinIORawObjectStore_RemovesObjectWhenMetadataWriteFails(t *testing.T) {
 	}
 
 	_, err = store.client.StatObject(ctx, store.bucket, objectKey, minio.StatObjectOptions{})
-	if err == nil {
-		t.Fatal("Expected uncatalogued raw object to be removed")
-	}
-	if response := minio.ToErrorResponse(err); response.Code != "NoSuchKey" {
-		t.Fatalf("Expected removed raw object to return NoSuchKey, got %v", err)
+	if err != nil {
+		t.Fatalf("Expected raw object to remain available after metadata failure: %v", err)
 	}
 }
 

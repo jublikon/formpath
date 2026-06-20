@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -137,8 +136,6 @@ type MinIORawObjectStore struct {
 	bucket string
 }
 
-const rawObjectCleanupTimeout = 10 * time.Second
-
 func NewMinIORawObjectStore(ctx context.Context, db *sql.DB, cfg appConfig) (*MinIORawObjectStore, error) {
 	client, err := minio.New(cfg.S3Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, ""),
@@ -203,13 +200,7 @@ func (store *MinIORawObjectStore) SaveRawObject(ctx context.Context, object RawO
 			fetched_at = excluded.fetched_at
 	`, object.UserID, object.Provider, object.ProviderObjectType, object.ProviderObjectID, object.ObjectKey, sha, object.ContentType, len(object.Body), fetchedAt)
 	if err != nil {
-		metadataErr := fmt.Errorf("recording raw object metadata: %w", err)
-		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), rawObjectCleanupTimeout)
-		defer cancel()
-		if cleanupErr := store.client.RemoveObject(cleanupCtx, store.bucket, object.ObjectKey, minio.RemoveObjectOptions{}); cleanupErr != nil {
-			return errors.Join(metadataErr, fmt.Errorf("removing uncatalogued raw object: %w", cleanupErr))
-		}
-		return metadataErr
+		return fmt.Errorf("recording raw object metadata: %w", err)
 	}
 
 	return nil

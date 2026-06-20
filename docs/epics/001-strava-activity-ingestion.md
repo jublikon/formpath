@@ -89,6 +89,7 @@ This is the first vertical slice through the entire system: OAuth integration, A
 - This slice does not need a background worker or scheduled sync; request-triggered sync is the intended behavior
 - The sync follows a raw-first ELT sequence: extract provider bytes, load them unchanged into MinIO, then transform the persisted object into canonical records
 - Raw Strava responses are stored as MinIO objects for later reprocessing, including successful responses that cannot currently be transformed
+- Successfully uploaded raw responses are retained when their metadata cannot be recorded; uncatalogued objects require later reconciliation before transformation
 - Postgres stores raw object metadata and canonical references
 - Deduplicate via a `(provider, provider_id)` unique constraint
 
