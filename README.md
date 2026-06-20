@@ -47,3 +47,8 @@ Services:
 OAuth user tokens are stored in Postgres. Raw provider payloads are stored in [MinIO](https://www.min.io/), with object metadata and canonical records in Postgres.
 
 When the backend runs inside Compose, `docker-compose.yml` overrides `DATABASE_URL` and `S3_ENDPOINT` to use service names. When the backend runs directly with `go run ./cmd/server`, the `.env.example` localhost values are the right shape.
+
+When `DATABASE_URL` is configured, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, and
+`S3_SECRET_ACCESS_KEY` are also required. The backend validates this raw-storage
+dependency during startup because canonical ingestion transforms only persisted
+raw objects.

@@ -39,6 +39,12 @@ validation, or canonical normalization occurs.
   returning a transformation error.
 - Stop canonical persistence when the newly written raw object cannot be read
   back.
+- Require complete S3 configuration at backend startup whenever Postgres
+  persistence is configured.
+- Remove a newly uploaded raw object when its metadata cannot be recorded in
+  Postgres.
+- Verify loaded raw bytes against their catalogued SHA-256 checksum before
+  transformation.
 - Added tests proving that transformation uses the stored payload rather than
   the original in-memory HTTP response.
 - Extended the opt-in MinIO integration test to verify that stored raw bytes
@@ -62,6 +68,8 @@ validation, or canonical normalization occurs.
 - `go test ./...` passed.
 - The opt-in MinIO/Postgres raw object integration test passed against the
   local Compose stack, including unchanged object retrieval.
+- The integration suite covers compensation after metadata failure and
+  checksum mismatch rejection.
 - `git diff --check` passed.
 
 ## Follow-ups

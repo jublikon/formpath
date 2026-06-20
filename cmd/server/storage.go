@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -136,6 +137,8 @@ type MinIORawObjectStore struct {
 	bucket string
 }
 
+const rawObjectCleanupTimeout = 10 * time.Second
+
 func NewMinIORawObjectStore(ctx context.Context, db *sql.DB, cfg appConfig) (*MinIORawObjectStore, error) {
 	client, err := minio.New(cfg.S3Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, ""),
@@ -200,13 +203,28 @@ func (store *MinIORawObjectStore) SaveRawObject(ctx context.Context, object RawO
 			fetched_at = excluded.fetched_at
 	`, object.UserID, object.Provider, object.ProviderObjectType, object.ProviderObjectID, object.ObjectKey, sha, object.ContentType, len(object.Body), fetchedAt)
 	if err != nil {
-		return fmt.Errorf("recording raw object metadata: %w", err)
+		metadataErr := fmt.Errorf("recording raw object metadata: %w", err)
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), rawObjectCleanupTimeout)
+		defer cancel()
+		if cleanupErr := store.client.RemoveObject(cleanupCtx, store.bucket, object.ObjectKey, minio.RemoveObjectOptions{}); cleanupErr != nil {
+			return errors.Join(metadataErr, fmt.Errorf("removing uncatalogued raw object: %w", cleanupErr))
+		}
+		return metadataErr
 	}
 
 	return nil
 }
 
 func (store *MinIORawObjectStore) GetRawObject(ctx context.Context, objectKey string) ([]byte, error) {
+	var expectedSHA string
+	if err := store.db.QueryRowContext(ctx, `
+		select sha256
+		from raw_objects
+		where object_key = $1
+	`, objectKey).Scan(&expectedSHA); err != nil {
+		return nil, fmt.Errorf("loading raw object metadata: %w", err)
+	}
+
 	object, err := store.client.GetObject(ctx, store.bucket, objectKey, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("opening raw object: %w", err)
@@ -215,6 +233,12 @@ func (store *MinIORawObjectStore) GetRawObject(ctx context.Context, objectKey st
 	body, err := readAllAndClose(object)
 	if err != nil {
 		return nil, fmt.Errorf("reading raw object: %w", err)
+	}
+
+	actualSum := sha256.Sum256(body)
+	actualSHA := hex.EncodeToString(actualSum[:])
+	if actualSHA != expectedSHA {
+		return nil, fmt.Errorf("raw object checksum mismatch for %q: expected %s, got %s", objectKey, expectedSHA, actualSHA)
 	}
 	return body, nil
 }

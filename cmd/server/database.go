@@ -20,6 +20,9 @@ func configurePersistence(cfg appConfig) (*persistenceResources, error) {
 	if cfg.DatabaseURL == "" {
 		return &persistenceResources{}, nil
 	}
+	if err := validateRawObjectStoreConfig(cfg); err != nil {
+		return nil, err
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), databaseConnectTimeout)
 	defer cancel()
@@ -33,14 +36,12 @@ func configurePersistence(cfg appConfig) (*persistenceResources, error) {
 	providerTokenStore = NewPostgresTokenStore(db)
 	providerActivityStore = NewPostgresActivityStore(db)
 
-	if rawObjectStoreConfigured(cfg) {
-		rawStore, err := NewMinIORawObjectStore(ctx, db, cfg)
-		if err != nil {
-			resources.Close()
-			return nil, fmt.Errorf("initializing raw object store: %w", err)
-		}
-		providerRawObjectStore = rawStore
+	rawStore, err := NewMinIORawObjectStore(ctx, db, cfg)
+	if err != nil {
+		resources.Close()
+		return nil, fmt.Errorf("initializing raw object store: %w", err)
 	}
+	providerRawObjectStore = rawStore
 
 	return resources, nil
 }
@@ -81,4 +82,11 @@ func resolveMigrationsDir() string {
 
 func rawObjectStoreConfigured(cfg appConfig) bool {
 	return cfg.S3Endpoint != "" && cfg.S3AccessKeyID != "" && cfg.S3SecretAccessKey != ""
+}
+
+func validateRawObjectStoreConfig(cfg appConfig) error {
+	if rawObjectStoreConfigured(cfg) {
+		return nil
+	}
+	return fmt.Errorf("S3_ENDPOINT, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY are required when DATABASE_URL is configured")
 }

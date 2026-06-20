@@ -30,6 +30,8 @@ Provider ingestion follows a raw-first ELT sequence:
 The persisted raw object is the source of truth for canonical transformation.
 The synchronous Strava sync therefore reads the object back from raw storage
 before decoding, validating, normalizing, and writing activities to Postgres.
+The read path verifies the stored bytes against the SHA-256 checksum recorded
+with the raw object metadata.
 
 Provider-specific normalization remains part of the transform step. Canonical
 records may intentionally reduce provider detail, but the complete provider
@@ -43,8 +45,13 @@ responses remain request failures and are not treated as provider data.
 
 - A successful raw load is required before canonical activities can be
   transformed or updated.
+- A backend configured with Postgres requires a complete raw object store
+  configuration and fails during startup when it is missing.
 - Invalid or currently unsupported provider payloads remain stored even when
   transformation fails.
+- If raw object metadata cannot be recorded after an upload, the uploaded
+  object is removed so it does not become an uncatalogued orphan.
+- A checksum mismatch prevents transformation and canonical persistence.
 - Canonical tables contain derived data and can be rebuilt from raw objects
   when a reprocessing workflow is introduced.
 - The raw object store must support both writing and reading objects.
