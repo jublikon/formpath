@@ -2,82 +2,98 @@
 
 ## Project overview
 
-Formpath is a local-first training application for ambitious recreational athletes. The current product imports Strava activities, stores canonical activity data in Postgres and raw provider payloads in MinIO, and presents a React training overview. The backend is written in Go; the frontend uses React, TypeScript, and Vite.
+Do not maintain a separate product description here. Use these sources of truth:
+
+- [Product vision](docs/product/vision.md) for the long-term purpose and intended users.
+- [Product roadmap](docs/product/roadmap.md) for current, completed, and candidate work.
+- [Epics](docs/epics/) for feature scope, acceptance criteria, and explicit exclusions.
+- [Changelog](docs/changelog/) for what has actually been implemented and verified.
+- [README](README.md) for the documentation index and local setup.
+
+Before making product or architecture assumptions, read the relevant documents above and verify them against the current code.
 
 ## Repository layout
 
-- `cmd/server/`: Go HTTP server, Strava integration, storage, migrations, and backend tests.
-- `migrations/`: Postgres schema migrations applied by the backend.
-- `web/`: React/TypeScript frontend, Vite configuration, ESLint configuration, and Vitest tests.
-- `docs/epics/`: product slices and acceptance criteria.
-- `docs/adr/`: accepted architectural decisions.
-- `docs/changelog/`: durable records of merged changes and their verification.
-- `docker-compose.yml`: local Postgres, MinIO, and backend stack.
+- [`cmd/server/`](cmd/server/) contains the backend entry point, implementation, and colocated tests.
+- [`migrations/`](migrations/) contains database migrations.
+- [`web/`](web/) contains the frontend; use [`web/package.json`](web/package.json) as the command source of truth.
+- [`docs/product/`](docs/product/) contains vision and roadmap documents.
+- [`docs/epics/`](docs/epics/) contains scoped product work and acceptance criteria.
+- [`docs/adr/`](docs/adr/) contains accepted architectural decisions.
+- [`docs/changelog/`](docs/changelog/) contains durable records of delivered changes; follow its [README](docs/changelog/README.md).
+- [`docker-compose.yml`](docker-compose.yml), [`Dockerfile`](Dockerfile), and [`.env.example`](.env.example) define the visible local runtime setup.
 
 ## Development commands
 
-- `docker compose up --build`: start the full local backend stack. It requires a local `.env` based on `.env.example`.
-- `go run ./cmd/server`: run the backend directly with localhost-oriented environment values.
-- `cd web && npm ci`: install the locked frontend dependencies.
-- `cd web && npm run dev`: start the Vite development server; `/api` and `/auth` are proxied to `http://localhost:8080`.
-- `cd web && npm run build`: type-check and create the production frontend build.
-- `cd web && npm run lint`: run ESLint.
+Use the commands documented or configured in the repository; do not invent a parallel command layer.
+
+- Follow [README local development](README.md#local-development) for environment setup and the full local stack.
+- Use `docker compose up --build` for the Compose setup defined in [`docker-compose.yml`](docker-compose.yml).
+- Use `go run ./cmd/server` for direct backend execution as described in the [README](README.md#local-development).
+- In `web/`, use `npm ci`, `npm run dev`, `npm run build`, and `npm run lint`; verify scripts in [`web/package.json`](web/package.json).
+- Check [`web/vite.config.ts`](web/vite.config.ts) before making assumptions about development proxy behavior.
 
 ## Test commands
 
-- `go test ./...`: run the normal, infrastructure-free Go test suite.
-- `cd web && npm test`: run frontend unit tests once with Vitest.
-- Postgres tests require a running test database and `FORMPATH_DB_TEST=1`.
-- MinIO tests require a running test service and `FORMPATH_S3_TEST=1`.
-- The real Strava smoke test is opt-in with `STRAVA_SMOKE_TEST=1` and uses local credentials; do not run it unless explicitly needed.
+- Run `go test ./...` for the normal Go suite. Its infrastructure-free intent is recorded in [Changelog 001](docs/changelog/001-strava-activity-ingestion.md#decisions).
+- Run `cd web && npm test` for frontend tests; use [`web/package.json`](web/package.json) for the canonical script.
+- Read [`cmd/server/storage_integration_test.go`](cmd/server/storage_integration_test.go) before running opt-in Postgres or MinIO tests.
+- Read [`cmd/server/strava_athlete_smoke_test.go`](cmd/server/strava_athlete_smoke_test.go) before running the real-provider smoke test.
+- Do not enable tests that use infrastructure, credentials, or external providers unless the changed surface requires them.
 
 ## Architecture principles
 
-- Prefer simple, explicit, idiomatic Go and small React/TypeScript modules over abstraction-heavy designs.
-- Build thin vertical slices that work through the real product flow.
-- Keep provider-specific adapters separate from canonical activity data and provider-neutral UI calculations.
-- Keep `main.go` a thin composition root and HTTP handlers focused on transport concerns.
-- Store canonical, queryable records in Postgres and raw provider payloads in MinIO/S3-compatible storage.
-- Keep ingestion idempotent and deduplication rules explicit.
-- Optimize for local development and debuggability without introducing premature cloud-specific infrastructure.
-- Do not add major dependencies, infrastructure, or schema changes without clear justification.
+Architecture is documented in accepted decisions and feature documents. Read the relevant source before changing a boundary:
+
+- [ADR-001](docs/adr/001-go-backend-language.md): backend language decision.
+- [ADR-002](docs/adr/002-strava-first-provider-oauth2.md): first provider, OAuth flow, and provider-boundary consequences.
+- [ADR-003](docs/adr/003-postgres-local-first-token-storage.md): persistence, raw storage, secrets, and local-first decisions.
+- [Epic 001](docs/epics/001-strava-activity-ingestion.md): ingestion slice and canonical activity expectations.
+- [Epic 002](docs/epics/002-training-overview.md): training-overview calculations, UI boundaries, and exclusions.
+- [Changelog entries](docs/changelog/) for later implementation decisions that refine the epics and ADRs.
+
+Do not restate those decisions here. Preserve them unless the task explicitly changes them; record durable changes in the appropriate ADR, epic, and changelog.
 
 ## Testing expectations
 
 - Run the smallest relevant tests while iterating, then the broader affected suites before completion.
-- Add deterministic tests for changed logic, especially normalization, aggregation, date/time behavior, persistence boundaries, deduplication, and error paths.
-- Keep `go test ./...` independent of external services; gate infrastructure and real-provider tests behind their existing environment flags.
-- For UI changes, validate loading, disconnected, empty, syncing, success, and failure states as applicable, including responsive and accessible behavior.
+- Derive required scenarios from the acceptance criteria in the relevant [epic](docs/epics/) and from nearby existing tests.
+- Follow the established backend test organization described in [Changelog 001](docs/changelog/001-strava-activity-ingestion.md#relevant-changes).
+- Follow the frontend verification precedent in [Changelog 003](docs/changelog/003-training-overview.md#verification) when the touched UI surface makes it relevant.
+- Keep the default test suite independent of external services; preserve the opt-in guards visible in the integration and smoke tests.
 - Never use real personal activity data, tokens, or credentials in fixtures or snapshots.
 
 ## Documentation expectations
 
-- Update the README when local setup or standard commands change.
-- Update an epic when scope or acceptance criteria change.
-- Add or update an ADR for durable architectural decisions.
-- Add a changelog entry for a merged feature or meaningful fix, including decisions, verification, and follow-ups.
-- Keep documentation self-contained; do not rely on private conversations for project context.
+- Use [README](README.md) for local setup and the top-level documentation index.
+- Use [product documents](docs/product/) for vision and roadmap changes.
+- Use [epics](docs/epics/) for feature scope, acceptance criteria, and exclusions.
+- Use [ADRs](docs/adr/) for durable architectural decisions.
+- Follow the [changelog guide](docs/changelog/README.md) for delivered features and meaningful fixes.
+- Link to the canonical document instead of duplicating descriptions in agent instructions.
+- Keep repository documentation self-contained; do not rely on private conversations for project context.
 
 ## Security and secrets
 
 - Never edit or commit `.env`, credentials, tokens, personal activity data, or local-only configuration.
-- Use `.env.example` only to document variable names and safe local defaults.
-- Do not expose OAuth tokens, client secrets, raw provider payloads, or internal errors in logs, responses, fixtures, screenshots, or documentation.
-- Treat health, training, location, and user-adjacent data as sensitive; use synthetic or anonymized examples.
+- Use [`.env.example`](.env.example) only as the tracked environment-variable template; confirm ignore behavior in [`.gitignore`](.gitignore).
+- Follow the credential, token, and raw-storage decisions in [ADR-003](docs/adr/003-postgres-local-first-token-storage.md).
+- Follow the non-exposure acceptance criteria in [Epic 001](docs/epics/001-strava-activity-ingestion.md#acceptance-criteria).
+- Use synthetic or anonymized examples in tests, screenshots, and documentation.
 
 ## Definition of done
 
 - The requested behavior is implemented with a focused, reviewable diff.
-- Relevant Go and/or frontend tests pass; lint and build checks pass for frontend changes.
+- Relevant commands from [Test commands](#test-commands) pass.
+- Acceptance criteria in the relevant [epic](docs/epics/) are satisfied or explicitly identified as out of scope.
 - External-service tests are run when the touched behavior requires them, or the omission is stated.
-- User-visible flows and important error states are verified when applicable.
-- Documentation is updated when behavior, setup, architecture, or project history changes.
+- Documentation is updated in its canonical location when behavior, setup, scope, architecture, or project history changes.
 - No secrets, generated build output, unrelated formatting, or unrelated refactors are included.
 - Changed files, validation performed, assumptions, risks, and follow-ups are summarized.
 
 ## Agent working style
 
-- Explore relevant code, tests, and documentation before editing.
+- Start with [README](README.md), then read the relevant product document, epic, ADR, changelog, code, and tests before editing.
 - Make the smallest safe assumption when details are ambiguous and state it.
 - Prefer small, reviewable diffs and avoid broad cleanup unrelated to the task.
 - Preserve existing conventions and user changes.
