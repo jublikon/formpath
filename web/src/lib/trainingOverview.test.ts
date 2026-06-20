@@ -38,10 +38,16 @@ describe('buildTrainingOverview', () => {
     expect(overview.days[0]).toEqual({
       date: '2026-05-22',
       movingSeconds: 0,
+      runDistanceMeters: 0,
+      rideDistanceMeters: 0,
+      workoutMovingSeconds: 0,
     })
     expect(overview.days[27]).toEqual({
       date: '2026-06-18',
       movingSeconds: 0,
+      runDistanceMeters: 0,
+      rideDistanceMeters: 0,
+      workoutMovingSeconds: 0,
     })
   })
 
@@ -67,6 +73,74 @@ describe('buildTrainingOverview', () => {
     ).toEqual({
       date: '2026-06-16',
       movingSeconds: 4500,
+      runDistanceMeters: 0,
+      rideDistanceMeters: 0,
+      workoutMovingSeconds: 0,
+    })
+  })
+
+  it('builds activity-specific daily distance and time series', () => {
+    const overview = buildTrainingOverview(
+      [
+        activity({
+          id: 'morning-run',
+          activity_type: 'run',
+          started_at: localDate(2026, 5, 16, 8).toISOString(),
+          distance_meters: 7200,
+          moving_seconds: 2400,
+        }),
+        activity({
+          id: 'evening-run',
+          activity_type: ' Run ',
+          started_at: localDate(2026, 5, 16, 18).toISOString(),
+          distance_meters: 3800,
+          moving_seconds: 1500,
+        }),
+        activity({
+          id: 'ride',
+          activity_type: 'ride',
+          started_at: localDate(2026, 5, 17).toISOString(),
+          distance_meters: 42500,
+          moving_seconds: 5400,
+        }),
+        activity({
+          id: 'workout',
+          activity_type: 'workout',
+          started_at: localDate(2026, 5, 18).toISOString(),
+          distance_meters: 900,
+          moving_seconds: 2700,
+        }),
+        activity({
+          id: 'walk',
+          activity_type: 'walk',
+          started_at: localDate(2026, 5, 18).toISOString(),
+          distance_meters: 5000,
+          moving_seconds: 3600,
+        }),
+      ],
+      today,
+    )
+
+    expect(
+      overview.days.find((day) => day.date === '2026-06-16'),
+    ).toMatchObject({
+      runDistanceMeters: 11000,
+      rideDistanceMeters: 0,
+      workoutMovingSeconds: 0,
+    })
+    expect(
+      overview.days.find((day) => day.date === '2026-06-17'),
+    ).toMatchObject({
+      runDistanceMeters: 0,
+      rideDistanceMeters: 42500,
+      workoutMovingSeconds: 0,
+    })
+    expect(
+      overview.days.find((day) => day.date === '2026-06-18'),
+    ).toMatchObject({
+      runDistanceMeters: 0,
+      rideDistanceMeters: 0,
+      workoutMovingSeconds: 2700,
     })
   })
 

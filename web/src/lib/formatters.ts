@@ -55,6 +55,15 @@ export function formatDistance(
   }).format(meters / 1000)} km`
 }
 
+export function formatKilometers(
+  meters: number,
+  locale: Intl.LocalesArgument = defaultNumberLocale,
+): string {
+  return `${new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+  }).format(meters / 1000)} km`
+}
+
 export function formatDuration(seconds: number): string {
   const totalMinutes = Math.round(seconds / 60)
   const hours = Math.floor(totalMinutes / 60)

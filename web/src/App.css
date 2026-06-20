@@ -206,6 +206,40 @@ header h1 {
   margin-bottom: 8px;
 }
 
+.activity-charts {
+  margin-bottom: 32px;
+}
+
+.activity-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.activity-chart-card {
+  min-width: 0;
+  padding: 20px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #d9dfdd;
+  border-radius: 8px;
+}
+
+.activity-chart-heading {
+  margin-bottom: 12px;
+}
+
+.activity-chart-heading h3 {
+  margin: 0;
+  color: #17201e;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.chart-canvas {
+  min-width: 0;
+}
+
 .training-chart {
   display: block;
   width: 100%;
@@ -215,6 +249,13 @@ header h1 {
 .chart-grid-line {
   stroke: #e3e8e6;
   stroke-width: 1;
+}
+
+.chart-y-label {
+  fill: #6d7875;
+  font-size: 18px;
+  text-anchor: end;
+  dominant-baseline: middle;
 }
 
 .chart-area {
@@ -249,6 +290,14 @@ header h1 {
 
 .chart-label-2 {
   transform: translateX(-100%);
+}
+
+.chart-summary {
+  min-height: 40px;
+  margin: 16px 0 0;
+  color: #5d6a67;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .visually-hidden {
@@ -354,6 +403,10 @@ header h1 {
 @media (max-width: 900px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .activity-chart-grid {
+    grid-template-columns: 1fr;
   }
 }
 

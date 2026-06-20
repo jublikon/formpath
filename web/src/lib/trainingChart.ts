@@ -1,12 +1,15 @@
 import { area, curveMonotoneX, line } from 'd3-shape'
-import type { TrainingDay } from './trainingOverview'
-
 type ChartSize = {
   width: number
   height: number
 }
 
-export type TrainingChartPoint = TrainingDay & {
+export type ChartDay = {
+  date: string
+  value: number
+}
+
+export type TrainingChartPoint = ChartDay & {
   x: number
   y: number
 }
@@ -15,7 +18,7 @@ export type TrainingChart = {
   linePath: string
   areaPath: string
   points: TrainingChartPoint[]
-  maxMovingSeconds: number
+  maxValue: number
   bounds: {
     top: number
     right: number
@@ -28,29 +31,26 @@ const chartPadding = {
   top: 20,
   right: 20,
   bottom: 36,
-  left: 48,
+  left: 94,
 }
 
 export function buildTrainingChart(
-  days: TrainingDay[],
+  days: ChartDay[],
   size: ChartSize,
 ): TrainingChart {
   const plotWidth = size.width - chartPadding.left - chartPadding.right
   const baselineY = size.height - chartPadding.bottom
   const plotHeight = baselineY - chartPadding.top
-  const maxMovingSeconds = Math.max(
-    0,
-    ...days.map((day) => day.movingSeconds),
-  )
+  const maxValue = Math.max(0, ...days.map((day) => day.value))
   const lastIndex = Math.max(days.length - 1, 1)
 
   const points = days.map((day, index) => {
     const x = chartPadding.left + (index / lastIndex) * plotWidth
     const y =
-      maxMovingSeconds === 0
+      maxValue === 0
         ? baselineY
         : chartPadding.top +
-          (1 - day.movingSeconds / maxMovingSeconds) * plotHeight
+          (1 - day.value / maxValue) * plotHeight
 
     return {
       ...day,
@@ -76,7 +76,7 @@ export function buildTrainingChart(
     linePath,
     areaPath,
     points,
-    maxMovingSeconds,
+    maxValue,
     bounds: {
       top: chartPadding.top,
       right: size.width - chartPadding.right,

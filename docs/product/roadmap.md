@@ -2,11 +2,18 @@
 
 ## Current
 
-### Epic 002: Training Overview
+### Epic 003: Activity-Type Graphs
 
-Turn imported canonical activities into the first useful Formpath product experience: a single-page dashboard with four-week summary metrics, a daily training-volume curve, and a human-readable recent activity list.
+Show separate four-week graphs for running distance, cycling distance, and
+workout moving time using the existing canonical activity data.
 
 ## Completed
+
+### Epic 002: Training Overview
+
+Turn imported canonical activities into the first useful Formpath product
+experience: a single-page dashboard with four-week summary metrics, a daily
+training-volume curve, and a human-readable recent activity list.
 
 ### Epic 001: Strava Activity Ingestion
 

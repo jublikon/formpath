@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { TrainingDay } from './trainingOverview'
+import type { ChartDay } from './trainingChart'
 import { buildTrainingChart } from './trainingChart'
 
-function trainingDays(values: number[]): TrainingDay[] {
-  return values.map((movingSeconds, index) => ({
+function trainingDays(values: number[]): ChartDay[] {
+  return values.map((value, index) => ({
     date: `2026-06-${String(index + 1).padStart(2, '0')}`,
-    movingSeconds,
+    value,
   }))
 }
 
@@ -41,6 +41,6 @@ describe('buildTrainingChart', () => {
     expect(new Set(chart.points.map((point) => point.y))).toEqual(
       new Set([chart.bounds.bottom]),
     )
-    expect(chart.maxMovingSeconds).toBe(0)
+    expect(chart.maxValue).toBe(0)
   })
 })
