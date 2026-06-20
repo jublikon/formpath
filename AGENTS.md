@@ -81,16 +81,6 @@ Do not restate those decisions here. Preserve them unless the task explicitly ch
 - Follow the non-exposure acceptance criteria in [Epic 001](docs/epics/001-strava-activity-ingestion.md#acceptance-criteria).
 - Use synthetic or anonymized examples in tests, screenshots, and documentation.
 
-## Definition of done
-
-- The requested behavior is implemented with a focused, reviewable diff.
-- Relevant commands from [Test commands](#test-commands) pass.
-- Acceptance criteria in the relevant [epic](docs/epics/) are satisfied or explicitly identified as out of scope.
-- External-service tests are run when the touched behavior requires them, or the omission is stated.
-- Documentation is updated in its canonical location when behavior, setup, scope, architecture, or project history changes.
-- No secrets, generated build output, unrelated formatting, or unrelated refactors are included.
-- Changed files, validation performed, assumptions, risks, and follow-ups are summarized.
-
 ## Agent working style
 
 - Start with [README](README.md), then read the relevant product document, epic, ADR, changelog, code, and tests before editing.
