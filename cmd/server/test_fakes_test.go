@@ -24,13 +24,29 @@ func (store *fakeTokenStore) GetProviderToken(ctx context.Context, userID string
 }
 
 type fakeRawObjectStore struct {
-	object RawObject
-	err    error
+	object     RawObject
+	loadedBody []byte
+	saveErr    error
+	getErr     error
+	saveCount  int
+	getCount   int
 }
 
 func (store *fakeRawObjectStore) SaveRawObject(ctx context.Context, object RawObject) error {
 	store.object = object
-	return store.err
+	store.saveCount++
+	return store.saveErr
+}
+
+func (store *fakeRawObjectStore) GetRawObject(ctx context.Context, objectKey string) ([]byte, error) {
+	store.getCount++
+	if store.getErr != nil {
+		return nil, store.getErr
+	}
+	if store.loadedBody != nil {
+		return store.loadedBody, nil
+	}
+	return store.object.Body, nil
 }
 
 type fakeActivityStore struct {

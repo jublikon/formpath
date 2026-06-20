@@ -228,6 +228,14 @@ func TestMinIORawObjectStore_SaveRawObjectRecordsMetadata(t *testing.T) {
 		t.Fatalf("saving raw object: %v", err)
 	}
 
+	loadedBody, err := store.GetRawObject(ctx, object.ObjectKey)
+	if err != nil {
+		t.Fatalf("loading raw object: %v", err)
+	}
+	if string(loadedBody) != string(object.Body) {
+		t.Fatalf("Expected loaded raw object %q, got %q", string(object.Body), string(loadedBody))
+	}
+
 	var sha string
 	var sizeBytes int
 	var contentType string
@@ -242,7 +250,7 @@ func TestMinIORawObjectStore_SaveRawObjectRecordsMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading raw object metadata: %v", err)
 	}
-	if sha != "5cf8edee7646cb9bd5e63244f9b6e1c6e080a7f5aa8196fba47f002c60bcdb19" {
+	if sha != "f0424806049ffb5c061d75aee0643d190b8879b100c860f86ebf1ab27a0e0e3d" {
 		t.Fatalf("Expected raw object sha256, got %q", sha)
 	}
 	if sizeBytes != len(object.Body) {

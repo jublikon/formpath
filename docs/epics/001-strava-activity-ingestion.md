@@ -6,19 +6,21 @@ related_adrs:
   - ADR-001
   - ADR-002
   - ADR-003
+  - ADR-004
 related_changelogs:
   - changelog-001
+  - changelog-004
 ---
 
 # Epic 001: Fetch and Store Strava Activities Locally
 
 ## Goal
 
-As a user, I can connect my Strava account, trigger a Strava activity sync through the backend, store canonical records locally in Postgres, store raw provider payloads locally in MinIO, and list locally stored activities.
+As a user, I can connect my Strava account, trigger a Strava activity sync through the backend, store raw provider payloads locally in MinIO, derive canonical records in Postgres from those stored payloads, and list locally stored activities.
 
 ## Why
 
-This is the first vertical slice through the entire system: OAuth integration, API fetch, raw payload storage, normalization, and persistence. After this, a working backend exists that all further features can build on.
+This is the first vertical slice through the entire system: OAuth integration, API fetch, raw payload storage, canonical transformation, and persistence. After this, a working backend exists that all further features can build on.
 
 ## Scope
 
@@ -31,8 +33,8 @@ This is the first vertical slice through the entire system: OAuth integration, A
 - Fetching the activity list from Strava (`GET /athlete/activities`)
 - Request-triggered ingestion via `POST /api/activities/sync`; calling this endpoint is sufficient for this feature
 - Listing locally stored activities via `GET /api/activities`
-- Storage as canonical activity records in Postgres
 - Storage of raw Strava payloads in MinIO, with object metadata in Postgres
+- Transformation of stored raw payloads into canonical activity records in Postgres
 - Docker Compose setup (Postgres + MinIO + backend)
 - `.env.example` with required variables
 
@@ -51,11 +53,11 @@ This is the first vertical slice through the entire system: OAuth integration, A
 1. `docker compose up` starts Postgres, MinIO, and the backend without manual steps
 2. Calling `http://localhost:8080/auth/strava` correctly redirects to Strava
 3. After the OAuth callback, tokens are stored in Postgres
-4. A `POST /api/activities/sync` endpoint fetches activities from Strava on request, stores them, and returns the stored activities as JSON
+4. A `POST /api/activities/sync` endpoint fetches activities from Strava on request, loads the unchanged response into raw storage, transforms the stored payload into canonical activities, and returns the stored activities as JSON
 5. When the token has expired, the backend refreshes it automatically and stores the new token
 6. A `GET /api/activities` endpoint returns locally stored activities as JSON without calling Strava
 7. Activities are deduplicated (calling `POST /api/activities/sync` again does not create duplicates)
-8. Strava-specific fields are mapped to a canonical activity model
+8. Strava-specific fields are mapped from the persisted raw payload to a canonical activity model
 9. Sensitive data (tokens, client_secret) does not appear in logs
 
 ## Canonical Activity Model (Draft)
@@ -85,7 +87,8 @@ This is the first vertical slice through the entire system: OAuth integration, A
 - Respect rate limits: 200 requests/15min, 2000/day
 - Strava returns a maximum of 200 activities per page — one page is enough for this slice
 - This slice does not need a background worker or scheduled sync; request-triggered sync is the intended behavior
-- Raw Strava responses are stored as MinIO objects for later reprocessing
+- The sync follows a raw-first ELT sequence: extract provider bytes, load them unchanged into MinIO, then transform the persisted object into canonical records
+- Raw Strava responses are stored as MinIO objects for later reprocessing, including successful responses that cannot currently be transformed
 - Postgres stores raw object metadata and canonical references
 - Deduplicate via a `(provider, provider_id)` unique constraint
 
@@ -94,7 +97,7 @@ This is the first vertical slice through the entire system: OAuth integration, A
 1. **Project Structure + Docker Compose** — Go project, Postgres, MinIO, `docker compose up` works
 2. **OAuth2 Flow** — authorize, callback, token in DB
 3. **Token Refresh** — automatic when the token has expired
-4. **Activity Sync** — fetch Strava API on request, map canonically, store in Postgres
+4. **Activity Sync** — fetch Strava API on request, load the raw response, transform it canonically, and store derived records in Postgres
 5. **API Endpoints** — `POST /api/activities/sync` triggers sync; `GET /api/activities` returns locally stored activities as JSON
 
 ## Relevant ADRs
@@ -102,3 +105,4 @@ This is the first vertical slice through the entire system: OAuth integration, A
 - [ADR-001: Go as Backend Language](../adr/001-go-backend-language.md)
 - [ADR-002: Strava OAuth2 Flow](../adr/002-strava-first-provider-oauth2.md)
 - [ADR-003: Postgres + Token Storage](../adr/003-postgres-local-first-token-storage.md)
+- [ADR-004: Raw-First ELT for Provider Ingestion](../adr/004-raw-first-elt-ingestion.md)

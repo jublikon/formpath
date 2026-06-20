@@ -10,7 +10,7 @@ Turn imported canonical activities into the first useful Formpath product experi
 
 ### Epic 001: Strava Activity Ingestion
 
-Connect Strava, import activities, preserve raw provider data, map activities into the canonical model, store them locally, and expose them through the API and initial React UI.
+Connect Strava, import activities through a raw-first ELT pipeline, preserve provider data as the source of truth, derive the canonical activity model, store it locally, and expose it through the API and initial React UI.
 
 ## Next Candidates
 
