@@ -82,6 +82,47 @@ func TestMapStravaActivities_MapsCanonicalFields(t *testing.T) {
 	}
 }
 
+func TestTransformStravaActivities_DecodesAndMapsStoredPayload(t *testing.T) {
+	activities, err := transformStravaActivities(
+		"00000000-0000-0000-0000-000000000042",
+		[]byte(`[
+			{
+				"id": 123,
+				"sport_type": "GravelRide",
+				"name": "Stored Gravel Ride",
+				"start_date": "2026-05-15T06:30:00Z"
+			}
+		]`),
+		"raw/object.json",
+	)
+	if err != nil {
+		t.Fatalf("Expected stored payload to transform, got error: %v", err)
+	}
+	if len(activities) != 1 {
+		t.Fatalf("Expected one transformed activity, got %d", len(activities))
+	}
+	if activities[0].ActivityType != "ride" {
+		t.Fatalf("Expected GravelRide to normalize to ride, got %q", activities[0].ActivityType)
+	}
+	if activities[0].RawObjectKey != "raw/object.json" {
+		t.Fatalf("Expected raw object key, got %q", activities[0].RawObjectKey)
+	}
+}
+
+func TestTransformStravaActivities_RejectsInvalidStoredPayload(t *testing.T) {
+	_, err := transformStravaActivities(
+		"00000000-0000-0000-0000-000000000042",
+		[]byte(`{`),
+		"raw/object.json",
+	)
+	if err == nil {
+		t.Fatal("Expected invalid stored payload to fail transformation")
+	}
+	if !strings.Contains(err.Error(), "decoding raw Strava activities") {
+		t.Fatalf("Expected raw decoding error, got %v", err)
+	}
+}
+
 func TestMapStravaActivities_AllowsOptionalFieldsToBeMissing(t *testing.T) {
 	activities, err := mapStravaActivities("00000000-0000-0000-0000-000000000042", []StravaActivity{
 		{

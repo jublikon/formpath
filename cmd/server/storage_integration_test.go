@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/minio/minio-go/v7"
 )
 
 func openIntegrationDB(t *testing.T) *sql.DB {
@@ -228,6 +230,14 @@ func TestMinIORawObjectStore_SaveRawObjectRecordsMetadata(t *testing.T) {
 		t.Fatalf("saving raw object: %v", err)
 	}
 
+	loadedBody, err := store.GetRawObject(ctx, object.ObjectKey)
+	if err != nil {
+		t.Fatalf("loading raw object: %v", err)
+	}
+	if string(loadedBody) != string(object.Body) {
+		t.Fatalf("Expected loaded raw object %q, got %q", string(object.Body), string(loadedBody))
+	}
+
 	var sha string
 	var sizeBytes int
 	var contentType string
@@ -242,7 +252,7 @@ func TestMinIORawObjectStore_SaveRawObjectRecordsMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading raw object metadata: %v", err)
 	}
-	if sha != "5cf8edee7646cb9bd5e63244f9b6e1c6e080a7f5aa8196fba47f002c60bcdb19" {
+	if sha != "f0424806049ffb5c061d75aee0643d190b8879b100c860f86ebf1ab27a0e0e3d" {
 		t.Fatalf("Expected raw object sha256, got %q", sha)
 	}
 	if sizeBytes != len(object.Body) {
@@ -251,4 +261,116 @@ func TestMinIORawObjectStore_SaveRawObjectRecordsMetadata(t *testing.T) {
 	if contentType != "application/json" {
 		t.Fatalf("Expected content type application/json, got %q", contentType)
 	}
+}
+
+func TestMinIORawObjectStore_PreservesObjectWhenMetadataWriteFails(t *testing.T) {
+	if os.Getenv("FORMPATH_S3_TEST") != "1" {
+		t.Skip("set FORMPATH_S3_TEST=1 to run MinIO integration tests")
+	}
+
+	db := openIntegrationDB(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	store := newIntegrationRawObjectStore(t, ctx, db)
+	objectKey := "integration/uncatalogued-activity-list.json"
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cleanupCancel()
+		_ = store.client.RemoveObject(cleanupCtx, store.bucket, objectKey, minio.RemoveObjectOptions{})
+	})
+
+	err := store.SaveRawObject(ctx, RawObject{
+		UserID:             "not-a-uuid",
+		Provider:           "strava",
+		ProviderObjectType: "activity_list",
+		ProviderObjectID:   "integration-uncatalogued-activity-list",
+		ObjectKey:          objectKey,
+		ContentType:        "application/json",
+		Body:               []byte(`[]`),
+		FetchedAt:          time.Date(2026, 5, 17, 9, 0, 0, 0, time.UTC),
+	})
+	if err == nil {
+		t.Fatal("Expected metadata write to fail")
+	}
+
+	_, err = store.client.StatObject(ctx, store.bucket, objectKey, minio.StatObjectOptions{})
+	if err != nil {
+		t.Fatalf("Expected raw object to remain available after metadata failure: %v", err)
+	}
+}
+
+func TestMinIORawObjectStore_RejectsChecksumMismatch(t *testing.T) {
+	if os.Getenv("FORMPATH_S3_TEST") != "1" {
+		t.Skip("set FORMPATH_S3_TEST=1 to run MinIO integration tests")
+	}
+
+	db := openIntegrationDB(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	userID := "00000000-0000-0000-0000-000000000104"
+	cleanupIntegrationUser(t, db, userID)
+	store := newIntegrationRawObjectStore(t, ctx, db)
+	object := RawObject{
+		UserID:             userID,
+		Provider:           "strava",
+		ProviderObjectType: "activity_list",
+		ProviderObjectID:   "integration-checksum-activity-list-104",
+		ObjectKey:          "integration/checksum-activity-list-104.json",
+		ContentType:        "application/json",
+		Body:               []byte(`[{"id":123}]`),
+		FetchedAt:          time.Date(2026, 5, 17, 9, 0, 0, 0, time.UTC),
+	}
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cleanupCancel()
+		_ = store.client.RemoveObject(cleanupCtx, store.bucket, object.ObjectKey, minio.RemoveObjectOptions{})
+	})
+
+	if err := store.SaveRawObject(ctx, object); err != nil {
+		t.Fatalf("saving raw object: %v", err)
+	}
+
+	corruptedBody := []byte(`[{"id":999}]`)
+	_, err := store.client.PutObject(
+		ctx,
+		store.bucket,
+		object.ObjectKey,
+		bytes.NewReader(corruptedBody),
+		int64(len(corruptedBody)),
+		minio.PutObjectOptions{ContentType: object.ContentType},
+	)
+	if err != nil {
+		t.Fatalf("overwriting raw object for checksum test: %v", err)
+	}
+
+	_, err = store.GetRawObject(ctx, object.ObjectKey)
+	if err == nil {
+		t.Fatal("Expected checksum mismatch")
+	}
+	if !strings.Contains(err.Error(), "checksum mismatch") {
+		t.Fatalf("Expected checksum mismatch error, got %v", err)
+	}
+}
+
+func newIntegrationRawObjectStore(t *testing.T, ctx context.Context, db *sql.DB) *MinIORawObjectStore {
+	t.Helper()
+
+	cfg := appConfig{
+		S3Endpoint:        os.Getenv("S3_ENDPOINT"),
+		S3AccessKeyID:     os.Getenv("S3_ACCESS_KEY_ID"),
+		S3SecretAccessKey: os.Getenv("S3_SECRET_ACCESS_KEY"),
+		S3Bucket:          envOrDefault("S3_BUCKET", "formpath-raw-test"),
+		S3UseSSL:          strings.EqualFold(os.Getenv("S3_USE_SSL"), "true"),
+	}
+	if cfg.S3Endpoint == "" || cfg.S3AccessKeyID == "" || cfg.S3SecretAccessKey == "" {
+		t.Fatal("S3_ENDPOINT, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY are required")
+	}
+
+	store, err := NewMinIORawObjectStore(ctx, db, cfg)
+	if err != nil {
+		t.Fatalf("creating raw object store: %v", err)
+	}
+	return store
 }

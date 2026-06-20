@@ -117,12 +117,17 @@ type RawObject struct {
 
 type RawObjectStore interface {
 	SaveRawObject(ctx context.Context, object RawObject) error
+	GetRawObject(ctx context.Context, objectKey string) ([]byte, error)
 }
 
 type noopRawObjectStore struct{}
 
 func (noopRawObjectStore) SaveRawObject(ctx context.Context, object RawObject) error {
-	return nil
+	return fmt.Errorf("raw object store is not configured")
+}
+
+func (noopRawObjectStore) GetRawObject(ctx context.Context, objectKey string) ([]byte, error) {
+	return nil, fmt.Errorf("raw object store is not configured")
 }
 
 type MinIORawObjectStore struct {
@@ -199,6 +204,34 @@ func (store *MinIORawObjectStore) SaveRawObject(ctx context.Context, object RawO
 	}
 
 	return nil
+}
+
+func (store *MinIORawObjectStore) GetRawObject(ctx context.Context, objectKey string) ([]byte, error) {
+	var expectedSHA string
+	if err := store.db.QueryRowContext(ctx, `
+		select sha256
+		from raw_objects
+		where object_key = $1
+	`, objectKey).Scan(&expectedSHA); err != nil {
+		return nil, fmt.Errorf("loading raw object metadata: %w", err)
+	}
+
+	object, err := store.client.GetObject(ctx, store.bucket, objectKey, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("opening raw object: %w", err)
+	}
+
+	body, err := readAllAndClose(object)
+	if err != nil {
+		return nil, fmt.Errorf("reading raw object: %w", err)
+	}
+
+	actualSum := sha256.Sum256(body)
+	actualSHA := hex.EncodeToString(actualSum[:])
+	if actualSHA != expectedSHA {
+		return nil, fmt.Errorf("raw object checksum mismatch for %q: expected %s, got %s", objectKey, expectedSHA, actualSHA)
+	}
+	return body, nil
 }
 
 type Activity struct {

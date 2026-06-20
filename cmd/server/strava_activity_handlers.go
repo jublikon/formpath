@@ -31,7 +31,7 @@ func activitiesSyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fetchedAt := time.Now().UTC()
-	stravaActivities, rawBody, err := fetchStravaActivities(token.AccessToken)
+	rawBody, err := fetchStravaActivitiesPayload(token.AccessToken)
 	if err != nil {
 		var statusErr HTTPStatusError
 		if errors.As(err, &statusErr) {
@@ -64,9 +64,15 @@ func activitiesSyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	activities, err := mapStravaActivities(cfg.AppUserID, stravaActivities, rawObjectKey)
+	loadedRawBody, err := providerRawObjectStore.GetRawObject(r.Context(), rawObjectKey)
 	if err != nil {
-		http.Error(w, "failed to map Strava activities", http.StatusBadGateway)
+		http.Error(w, "failed to load raw Strava activities", http.StatusInternalServerError)
+		return
+	}
+
+	activities, err := transformStravaActivities(cfg.AppUserID, loadedRawBody, rawObjectKey)
+	if err != nil {
+		http.Error(w, "failed to transform Strava activities", http.StatusBadGateway)
 		return
 	}
 

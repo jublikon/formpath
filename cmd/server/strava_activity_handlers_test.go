@@ -88,6 +88,12 @@ func TestActivitiesHandler_FetchesStoresAndReturnsActivities(t *testing.T) {
 	if rawStore.object.ObjectKey == "" {
 		t.Fatal("Expected raw Strava response to be stored")
 	}
+	if rawStore.saveCount != 1 {
+		t.Fatalf("Expected raw Strava response to be saved once, got %d saves", rawStore.saveCount)
+	}
+	if rawStore.getCount != 1 {
+		t.Fatalf("Expected stored raw Strava response to be loaded once, got %d loads", rawStore.getCount)
+	}
 
 	if activityStore.saveCount != 1 {
 		t.Fatalf("Expected activities to be saved once, got %d saves", activityStore.saveCount)
@@ -173,7 +179,7 @@ func TestActivitiesHandler_ReturnsTooManyRequestsWhenStravaRateLimitIsExceeded(t
 	}
 }
 
-func TestActivitiesHandler_ReturnsBadGatewayWhenStravaJSONIsInvalid(t *testing.T) {
+func TestActivitiesHandler_StoresRawPayloadBeforeInvalidJSONFailsTransformation(t *testing.T) {
 	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
 
 	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -184,9 +190,11 @@ func TestActivitiesHandler_ReturnsBadGatewayWhenStravaJSONIsInvalid(t *testing.T
 
 	originalStravaAPIBaseURL := stravaAPIBaseURL
 	originalProviderTokenStore := providerTokenStore
+	originalProviderRawObjectStore := providerRawObjectStore
 	t.Cleanup(func() {
 		stravaAPIBaseURL = originalStravaAPIBaseURL
 		providerTokenStore = originalProviderTokenStore
+		providerRawObjectStore = originalProviderRawObjectStore
 	})
 
 	stravaAPIBaseURL = stravaServer.URL
@@ -199,6 +207,8 @@ func TestActivitiesHandler_ReturnsBadGatewayWhenStravaJSONIsInvalid(t *testing.T
 			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
 		},
 	}
+	rawStore := &fakeRawObjectStore{}
+	providerRawObjectStore = rawStore
 
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
@@ -208,6 +218,12 @@ func TestActivitiesHandler_ReturnsBadGatewayWhenStravaJSONIsInvalid(t *testing.T
 	resp := w.Result()
 	if resp.StatusCode != http.StatusBadGateway {
 		t.Fatalf("Expected status 502 Bad Gateway, got %d", resp.StatusCode)
+	}
+	if rawStore.saveCount != 1 {
+		t.Fatalf("Expected invalid raw payload to be saved before transformation, got %d saves", rawStore.saveCount)
+	}
+	if rawStore.getCount != 1 {
+		t.Fatalf("Expected invalid raw payload to be loaded for transformation, got %d loads", rawStore.getCount)
 	}
 }
 
@@ -239,7 +255,7 @@ func TestActivitiesHandler_ReturnsErrorWhenRawStoreFails(t *testing.T) {
 			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
 		},
 	}
-	providerRawObjectStore = &fakeRawObjectStore{err: errors.New("raw store failed")}
+	providerRawObjectStore = &fakeRawObjectStore{saveErr: errors.New("raw store failed")}
 
 	req := httptest.NewRequest("GET", "/api/activities", nil)
 	w := httptest.NewRecorder()
@@ -252,7 +268,126 @@ func TestActivitiesHandler_ReturnsErrorWhenRawStoreFails(t *testing.T) {
 	}
 }
 
-func TestActivitiesHandler_ReturnsBadGatewayWhenMappingFails(t *testing.T) {
+func TestActivitiesHandler_ReturnsErrorWhenStoredRawPayloadCannotBeLoaded(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[]`))
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	originalProviderRawObjectStore := providerRawObjectStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+		providerRawObjectStore = originalProviderRawObjectStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "valid-access-token",
+			RefreshToken: "valid-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+	rawStore := &fakeRawObjectStore{getErr: errors.New("raw object unavailable")}
+	providerRawObjectStore = rawStore
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesSyncHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("Expected status 500 Internal Server Error, got %d", resp.StatusCode)
+	}
+	if rawStore.saveCount != 1 {
+		t.Fatalf("Expected raw payload to be saved before loading, got %d saves", rawStore.saveCount)
+	}
+	if rawStore.getCount != 1 {
+		t.Fatalf("Expected stored raw payload load once, got %d loads", rawStore.getCount)
+	}
+}
+
+func TestActivitiesHandler_TransformsStoredRawPayload(t *testing.T) {
+	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
+
+	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[
+			{
+				"id": 123,
+				"sport_type": "GravelRide",
+				"name": "Fetched Ride",
+				"start_date": "2026-05-15T06:30:00Z"
+			}
+		]`))
+	}))
+	defer stravaServer.Close()
+
+	originalStravaAPIBaseURL := stravaAPIBaseURL
+	originalProviderTokenStore := providerTokenStore
+	originalProviderRawObjectStore := providerRawObjectStore
+	originalProviderActivityStore := providerActivityStore
+	t.Cleanup(func() {
+		stravaAPIBaseURL = originalStravaAPIBaseURL
+		providerTokenStore = originalProviderTokenStore
+		providerRawObjectStore = originalProviderRawObjectStore
+		providerActivityStore = originalProviderActivityStore
+	})
+
+	stravaAPIBaseURL = stravaServer.URL
+	providerTokenStore = &fakeTokenStore{
+		token: ProviderToken{
+			UserID:       "00000000-0000-0000-0000-000000000042",
+			Provider:     "strava",
+			AccessToken:  "valid-access-token",
+			RefreshToken: "valid-refresh-token",
+			ExpiresAt:    time.Now().UTC().Add(30 * time.Minute),
+		},
+	}
+	providerRawObjectStore = &fakeRawObjectStore{
+		loadedBody: []byte(`[
+			{
+				"id": 456,
+				"sport_type": "VirtualRun",
+				"name": "Loaded Run",
+				"start_date": "2026-05-16T06:30:00Z"
+			}
+		]`),
+	}
+	activityStore := &fakeActivityStore{}
+	providerActivityStore = activityStore
+
+	req := httptest.NewRequest("GET", "/api/activities", nil)
+	w := httptest.NewRecorder()
+
+	activitiesSyncHandler(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected status 200 OK, got %d: %s", resp.StatusCode, string(body))
+	}
+	if len(activityStore.activities) != 1 {
+		t.Fatalf("Expected one transformed activity, got %d", len(activityStore.activities))
+	}
+	if activityStore.activities[0].ProviderID != "456" {
+		t.Fatalf("Expected transformation to use loaded raw payload id 456, got %q", activityStore.activities[0].ProviderID)
+	}
+	if activityStore.activities[0].ActivityType != "run" {
+		t.Fatalf("Expected loaded VirtualRun to normalize to run, got %q", activityStore.activities[0].ActivityType)
+	}
+}
+
+func TestActivitiesHandler_ReturnsBadGatewayWhenTransformationFails(t *testing.T) {
 	t.Setenv("APP_USER_ID", "00000000-0000-0000-0000-000000000042")
 
 	stravaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

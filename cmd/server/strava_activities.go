@@ -41,14 +41,14 @@ func (e HTTPStatusError) Unwrap() error {
 	return e.err
 }
 
-func fetchStravaActivities(accessToken string) ([]StravaActivity, []byte, error) {
+func fetchStravaActivitiesPayload(accessToken string) ([]byte, error) {
 	if accessToken == "" {
-		return nil, nil, errors.New("access token is required")
+		return nil, errors.New("access token is required")
 	}
 
 	activitiesURL, err := url.Parse(stravaAPIBaseURL + "/athlete/activities")
 	if err != nil {
-		return nil, nil, fmt.Errorf("parsing Strava activities URL: %w", err)
+		return nil, fmt.Errorf("parsing Strava activities URL: %w", err)
 	}
 
 	query := activitiesURL.Query()
@@ -58,7 +58,7 @@ func fetchStravaActivities(accessToken string) ([]StravaActivity, []byte, error)
 
 	req, err := http.NewRequest(http.MethodGet, activitiesURL.String(), nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("creating Strava activities request: %w", err)
+		return nil, fmt.Errorf("creating Strava activities request: %w", err)
 	}
 
 	req.Header.Set("Authorization", "Bearer "+accessToken)
@@ -66,27 +66,31 @@ func fetchStravaActivities(accessToken string) ([]StravaActivity, []byte, error)
 
 	resp, err := stravaHTTPClient.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("calling Strava activities endpoint: %w", err)
+		return nil, fmt.Errorf("calling Strava activities endpoint: %w", err)
 	}
 
 	body, err := readAllAndClose(resp.Body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading Strava activities response: %w", err)
+		return nil, fmt.Errorf("reading Strava activities response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, nil, HTTPStatusError{
+		return nil, HTTPStatusError{
 			code: resp.StatusCode,
 			err:  fmt.Errorf("Strava activities request failed with status %d", resp.StatusCode),
 		}
 	}
 
+	return body, nil
+}
+
+func transformStravaActivities(userID string, rawBody []byte, rawObjectKey string) ([]Activity, error) {
 	var activities []StravaActivity
-	if err := json.Unmarshal(body, &activities); err != nil {
-		return nil, nil, fmt.Errorf("decoding Strava activities response: %w", err)
+	if err := json.Unmarshal(rawBody, &activities); err != nil {
+		return nil, fmt.Errorf("decoding raw Strava activities: %w", err)
 	}
 
-	return activities, body, nil
+	return mapStravaActivities(userID, activities, rawObjectKey)
 }
 
 func mapStravaActivities(userID string, stravaActivities []StravaActivity, rawObjectKey string) ([]Activity, error) {
