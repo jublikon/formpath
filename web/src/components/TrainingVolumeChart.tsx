@@ -1,6 +1,7 @@
 import { formatDuration, formatPeriod } from '../lib/formatters'
 import { buildTrainingChart } from '../lib/trainingChart'
 import type { TrainingDay } from '../lib/trainingOverview'
+import { ChartInspector } from './ChartInspector'
 
 type TrainingVolumeChartProps = {
   days: TrainingDay[]
@@ -62,53 +63,64 @@ export function TrainingVolumeChart({
         <p className="period">{formatPeriod(startDate, endDate)}</p>
       </div>
 
-      <svg
-        className="training-chart"
-        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-labelledby="training-chart-title training-chart-description"
-      >
-        <title id="training-chart-title">
-          Daily moving time for the last 28 days
-        </title>
-        <desc id="training-chart-description">{description}</desc>
+      <div className="chart-plot">
+        <svg
+          className="training-chart"
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+          preserveAspectRatio="none"
+          role="img"
+          aria-labelledby="training-chart-title training-chart-description"
+        >
+          <title id="training-chart-title">
+            Daily moving time for the last 28 days
+          </title>
+          <desc id="training-chart-description">{description}</desc>
 
-        <defs>
-          <linearGradient
-            id="training-volume-gradient"
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="1"
-          >
-            <stop offset="0%" stopColor="#397368" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#397368" stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
+          <defs>
+            <linearGradient
+              id="training-volume-gradient"
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              <stop offset="0%" stopColor="#397368" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#397368" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
 
-        {[
-          chart.bounds.top,
-          (chart.bounds.top + chart.bounds.bottom) / 2,
-          chart.bounds.bottom,
-        ].map((y) => (
-          <line
-            className="chart-grid-line"
-            key={y}
-            x1={chart.bounds.left}
-            x2={chart.bounds.right}
-            y1={y}
-            y2={y}
+          {[
+            chart.bounds.top,
+            (chart.bounds.top + chart.bounds.bottom) / 2,
+            chart.bounds.bottom,
+          ].map((y) => (
+            <line
+              className="chart-grid-line"
+              key={y}
+              x1={chart.bounds.left}
+              x2={chart.bounds.right}
+              y1={y}
+              y2={y}
+            />
+          ))}
+
+          <path
+            className="chart-area"
+            d={chart.areaPath}
+            fill="url(#training-volume-gradient)"
           />
-        ))}
-
-        <path
-          className="chart-area"
-          d={chart.areaPath}
-          fill="url(#training-volume-gradient)"
+          <path className="chart-line" d={chart.linePath} />
+        </svg>
+        <ChartInspector
+          points={chart.points}
+          width={chartWidth}
+          height={chartHeight}
+          color="#397368"
+          formatDate={formatAccessibleChartDate}
+          formatValue={formatDuration}
+          label="daily moving time"
         />
-        <path className="chart-line" d={chart.linePath} />
-      </svg>
+      </div>
 
       <div className="chart-labels" aria-hidden="true">
         {labelPoints.map((point, index) => (

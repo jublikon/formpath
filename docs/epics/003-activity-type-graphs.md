@@ -5,6 +5,7 @@ slug: activity-type-graphs
 related_adrs: []
 related_changelogs:
   - changelog-005
+  - changelog-006
 ---
 
 # Epic 003: Activity-Type Graphs
@@ -35,6 +36,8 @@ measure for workouts without a meaningful distance.
 - Sum multiple matching activities on the same local calendar day
 - Show visible y-axis values with the metric unit
 - Keep the graphs understandable with text and accessible daily values
+- Let users inspect the exact date and value for each visible graph point with
+  pointer, touch, or keyboard input
 - Refresh all graphs after a successful Strava sync
 - Preserve the existing cross-sport daily moving-time graph
 - Preserve the existing summary metrics and recent activity list
@@ -45,7 +48,7 @@ measure for workouts without a meaningful distance.
 - Additional activity-type graphs
 - Combining or reclassifying unknown canonical activity types
 - Pace, speed, power, heart rate, training load, or intensity analysis
-- Interactive date ranges, tooltips, zooming, or chart comparison controls
+- Interactive date ranges, zooming, or chart comparison controls
 - New backend aggregate endpoints
 
 ## Time and Aggregation Rules
@@ -71,7 +74,9 @@ measure for workouts without a meaningful distance.
 7. The graphs update after sync without a page reload.
 8. The graph period matches the summary period.
 9. The graphs include accessible names, descriptions, and daily value text.
-10. Frontend tests, linting, build, and backend tests pass.
+10. Every graph exposes exact daily values through pointer hover, touch, and
+    left/right keyboard navigation.
+11. Frontend tests, linting, build, and backend tests pass.
 
 ## Technical Notes
 
@@ -81,3 +86,5 @@ measure for workouts without a meaningful distance.
   at the component boundary.
 - Reuse the canonical `run` and `ride` normalization already performed during
   provider transformation.
+- Keep the chart drawing in SVG and render interactive inspection as an HTML
+  overlay so tooltip text remains readable when the SVG is responsively scaled.

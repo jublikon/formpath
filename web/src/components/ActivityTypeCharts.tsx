@@ -8,6 +8,7 @@ import {
   type ChartDay,
 } from '../lib/trainingChart'
 import type { TrainingDay } from '../lib/trainingOverview'
+import { ChartInspector } from './ChartInspector'
 
 type ActivityTypeChartsProps = {
   days: TrainingDay[]
@@ -78,59 +79,74 @@ function ActivityChart({ config }: { config: ActivityChartConfig }) {
       </div>
 
       <div className="chart-canvas">
-        <svg
-          className="training-chart"
-          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-          preserveAspectRatio="none"
-          role="img"
-          aria-labelledby={`${titleId} ${descriptionId}`}
-        >
-          <title id={titleId}>{config.title} for the last 28 days</title>
-          <desc id={descriptionId}>{description}</desc>
+        <div className="chart-plot">
+          <svg
+            className="training-chart"
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-labelledby={`${titleId} ${descriptionId}`}
+          >
+            <title id={titleId}>{config.title} for the last 28 days</title>
+            <desc id={descriptionId}>{description}</desc>
 
-          <defs>
-            <linearGradient
-              id={`${config.id}-gradient`}
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
-            >
-              <stop offset="0%" stopColor={config.color} stopOpacity="0.28" />
-              <stop offset="100%" stopColor={config.color} stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-
-          {yAxisPositions.map((y, index) => (
-            <g key={y}>
-              <line
-                className="chart-grid-line"
-                x1={chart.bounds.left}
-                x2={chart.bounds.right}
-                y1={y}
-                y2={y}
-              />
-              <text
-                className="chart-y-label"
-                x={chart.bounds.left - 12}
-                y={y}
+            <defs>
+              <linearGradient
+                id={`${config.id}-gradient`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
               >
-                {config.formatValue(yAxisValues[index])}
-              </text>
-            </g>
-          ))}
+                <stop offset="0%" stopColor={config.color} stopOpacity="0.28" />
+                <stop
+                  offset="100%"
+                  stopColor={config.color}
+                  stopOpacity="0.02"
+                />
+              </linearGradient>
+            </defs>
 
-          <path
-            className="chart-area"
-            d={chart.areaPath}
-            fill={`url(#${config.id}-gradient)`}
+            {yAxisPositions.map((y, index) => (
+              <g key={y}>
+                <line
+                  className="chart-grid-line"
+                  x1={chart.bounds.left}
+                  x2={chart.bounds.right}
+                  y1={y}
+                  y2={y}
+                />
+                <text
+                  className="chart-y-label"
+                  x={chart.bounds.left - 12}
+                  y={y}
+                >
+                  {config.formatValue(yAxisValues[index])}
+                </text>
+              </g>
+            ))}
+
+            <path
+              className="chart-area"
+              d={chart.areaPath}
+              fill={`url(#${config.id}-gradient)`}
+            />
+            <path
+              className="chart-line"
+              d={chart.linePath}
+              style={{ stroke: config.color }}
+            />
+          </svg>
+          <ChartInspector
+            points={chart.points}
+            width={chartWidth}
+            height={chartHeight}
+            color={config.color}
+            formatDate={formatAccessibleChartDate}
+            formatValue={config.formatValue}
+            label={config.title.toLowerCase()}
           />
-          <path
-            className="chart-line"
-            d={chart.linePath}
-            style={{ stroke: config.color }}
-          />
-        </svg>
+        </div>
 
         <div className="chart-labels" aria-hidden="true">
           {dateLabelPoints.map((point, index) => (
