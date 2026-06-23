@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -56,6 +57,9 @@ func cleanupIntegrationUser(t *testing.T, db *sql.DB, userID string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
+		if _, err := db.ExecContext(ctx, "delete from training_goals where user_id = $1", userID); err != nil {
+			t.Errorf("cleaning training goals: %v", err)
+		}
 		if _, err := db.ExecContext(ctx, "delete from activities where user_id = $1", userID); err != nil {
 			t.Errorf("cleaning activities: %v", err)
 		}
@@ -66,6 +70,80 @@ func cleanupIntegrationUser(t *testing.T, db *sql.DB, userID string) {
 			t.Errorf("cleaning provider tokens: %v", err)
 		}
 	})
+}
+
+func TestPostgresTrainingGoalStore_SavesUpdatesLoadsAndDeletesGoal(t *testing.T) {
+	db := openIntegrationDB(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	userID := "00000000-0000-0000-0000-000000000105"
+	cleanupIntegrationUser(t, db, userID)
+
+	store := NewPostgresTrainingGoalStore(db)
+	targetDuration := 4 * 60 * 60
+	goal := TrainingGoal{
+		UserID:                userID,
+		GoalType:              trainingGoalTypeDistanceEvent,
+		Sport:                 trainingGoalSportRun,
+		Name:                  " Spring Marathon ",
+		TargetDistanceMeters:  42195,
+		TargetDate:            "2027-04-18",
+		TargetDurationSeconds: &targetDuration,
+	}
+	if err := store.SaveTrainingGoal(ctx, goal); err != nil {
+		t.Fatalf("saving training goal: %v", err)
+	}
+
+	goal.Sport = trainingGoalSportRide
+	goal.Name = "Summer Century"
+	goal.TargetDistanceMeters = 160934
+	goal.TargetDate = "2027-07-11"
+	goal.TargetDurationSeconds = nil
+	if err := store.SaveTrainingGoal(ctx, goal); err != nil {
+		t.Fatalf("updating training goal: %v", err)
+	}
+
+	got, err := store.GetTrainingGoal(ctx, userID)
+	if err != nil {
+		t.Fatalf("loading training goal: %v", err)
+	}
+	if got.ID == "" {
+		t.Fatal("Expected generated training goal id")
+	}
+	if got.UserID != userID {
+		t.Fatalf("Expected user id %q, got %q", userID, got.UserID)
+	}
+	if got.GoalType != trainingGoalTypeDistanceEvent {
+		t.Fatalf("Expected distance event goal, got %q", got.GoalType)
+	}
+	if got.Sport != trainingGoalSportRide {
+		t.Fatalf("Expected updated ride sport, got %q", got.Sport)
+	}
+	if got.Name != "Summer Century" {
+		t.Fatalf("Expected updated name, got %q", got.Name)
+	}
+	if got.TargetDistanceMeters != 160934 {
+		t.Fatalf("Expected updated distance 160934, got %f", got.TargetDistanceMeters)
+	}
+	if got.TargetDate != "2027-07-11" {
+		t.Fatalf("Expected updated target date, got %q", got.TargetDate)
+	}
+	if got.TargetDurationSeconds != nil {
+		t.Fatalf("Expected nil target duration after update, got %v", got.TargetDurationSeconds)
+	}
+	if got.CreatedAt == nil || got.UpdatedAt == nil {
+		t.Fatal("Expected created_at and updated_at to be loaded")
+	}
+
+	if err := store.DeleteTrainingGoal(ctx, userID); err != nil {
+		t.Fatalf("deleting training goal: %v", err)
+	}
+	_, err = store.GetTrainingGoal(ctx, userID)
+	if !errors.Is(err, ErrTrainingGoalNotFound) {
+		t.Fatalf("Expected training goal not found after delete, got %v", err)
+	}
 }
 
 func TestPostgresTokenStore_SaveAndUpdateProviderToken(t *testing.T) {

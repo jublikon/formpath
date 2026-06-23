@@ -35,6 +35,7 @@ func configurePersistence(cfg appConfig) (*persistenceResources, error) {
 	resources := &persistenceResources{db: db}
 	providerTokenStore = NewPostgresTokenStore(db)
 	providerActivityStore = NewPostgresActivityStore(db)
+	trainingGoalStore = NewPostgresTrainingGoalStore(db)
 
 	rawStore, err := NewMinIORawObjectStore(ctx, db, cfg)
 	if err != nil {
