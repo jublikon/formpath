@@ -56,6 +56,18 @@ Examples include:
 - reducing the load of the next workout after poor sleep or insufficient recovery
 - adjusting plans dynamically instead of following a rigid static schedule
 
+### Future Scenario: Capability Goals
+
+As a possible future product direction, Formpath could support ongoing
+capability goals in addition to event goals with a fixed date. An example is
+building and maintaining enough running fitness to complete five kilometers
+comfortably, rather than preparing for a particular race.
+
+Such a goal would need an explicit, measurable definition of terms such as
+"comfortably", potentially combining completed distance with subjective effort
+and continuity. This is a future scenario, not a current roadmap commitment or
+planned development slice.
+
 ---
 
 ## Product Direction
