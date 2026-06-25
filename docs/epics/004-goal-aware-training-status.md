@@ -87,6 +87,7 @@ available.
   goal
 - Completion percentages derived by dividing recent training distance by event
   distance
+- Percentage changes between the recent and preceding training periods
 - Recovery, readiness, fatigue, or injury-risk calculations
 - Apple Health, Polar H10, or additional provider integrations
 - Subjective check-ins
@@ -102,7 +103,10 @@ available.
 - The goal sport is either canonical `run` or canonical `ride`.
 - Target distance must be greater than zero.
 - Target date is stored as a calendar date rather than a timestamp.
-- A newly created target date cannot be before the user's current local date.
+- The browser rejects a newly created target date before its current local
+  calendar date.
+- The backend validates the target date as a real calendar date but does not
+  compare it with the server clock in this slice.
 - Target duration is optional and must be greater than zero when present.
 - Only one goal can be active for the local user. Creating another active goal
   requires replacing or removing the existing goal.
@@ -122,13 +126,12 @@ available.
 - Activity count counts every included canonical activity.
 - Longest activity means the included activity with the greatest
   `distance_meters`.
-- Absolute differences are shown for distance and activity count. A percentage
-  change is not shown when the comparison value is zero.
+- Only absolute differences are shown for distance and activity count.
 - Missing optional activity values do not exclude an otherwise valid activity.
 - Invalid activity timestamps are ignored rather than breaking the goal
   status.
-- Days remaining is a calendar-date difference. It is not calculated from
-  elapsed 24-hour intervals.
+- Days remaining is calculated in the browser from local calendar dates. It is
+  not calculated from elapsed 24-hour intervals.
 - Formatting uses the user's browser locale, following the existing overview.
 
 ## Status Interpretation
@@ -153,16 +156,17 @@ recommendation capabilities are still absent.
 
 1. A user without an active goal can create a running or cycling distance-event
    goal with a name, distance, date, and optional target time.
-2. Invalid distances, dates, and target times are rejected with understandable
-   validation messages.
+2. Invalid distances, malformed calendar dates, and invalid target times are
+   rejected with understandable validation messages. The UI also rejects a
+   target date before the browser's current local date.
 3. Reloading the application preserves and displays the active goal.
 4. The user can edit or remove the active goal.
 5. The goal status uses only locally stored canonical activities matching the
    selected goal sport.
 6. The status shows activity count, total distance, moving time, and longest
    activity for the recent 28-day period.
-7. The status compares recent distance and activity count with the immediately
-   preceding 28-day period.
+7. The status shows absolute differences in recent distance and activity count
+   compared with the immediately preceding 28-day period.
 8. The status shows the target date and calendar days remaining.
 9. The status updates after a successful activity sync without a page reload.
 10. Missing matching activities produce a useful empty status without
@@ -186,6 +190,9 @@ recommendation capabilities are still absent.
 - Reuse the existing canonical activity model as the status input.
 - Keep status calculation separate from React rendering so its rules are
   directly testable.
+- Keep browser-local date comparisons in the frontend for this slice. The goal
+  API accepts and returns the calendar date without converting it through a
+  server timezone.
 - Do not introduce a data warehouse or analytical job runner for this data
   volume. Revisit a shared server-side metrics layer when the status must be
   consumed by agents or additional clients.
