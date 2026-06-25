@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
@@ -89,6 +90,20 @@ func TestTrainingGoalValidate_RejectsInvalidGoals(t *testing.T) {
 				goal.TargetDistanceMeters = -1
 			},
 			wantErr: "target distance must be greater than zero",
+		},
+		{
+			name: "NaN target distance",
+			change: func(goal *TrainingGoal) {
+				goal.TargetDistanceMeters = math.NaN()
+			},
+			wantErr: "target distance must be finite",
+		},
+		{
+			name: "infinite target distance",
+			change: func(goal *TrainingGoal) {
+				goal.TargetDistanceMeters = math.Inf(1)
+			},
+			wantErr: "target distance must be finite",
 		},
 		{
 			name: "malformed target date",

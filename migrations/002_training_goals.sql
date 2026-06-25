@@ -8,7 +8,10 @@ create table if not exists training_goals (
     name text not null
         check (length(trim(name)) > 0),
     target_distance_meters double precision not null
-        check (target_distance_meters > 0),
+        check (
+            target_distance_meters > 0
+            and target_distance_meters < 'Infinity'::double precision
+        ),
     target_date date not null,
     target_duration_seconds integer
         check (

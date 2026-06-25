@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 )
@@ -170,6 +171,9 @@ func (goal TrainingGoal) Validate() error {
 	}
 	if strings.TrimSpace(goal.Name) == "" {
 		return errors.New("name is required")
+	}
+	if math.IsNaN(goal.TargetDistanceMeters) || math.IsInf(goal.TargetDistanceMeters, 0) {
+		return errors.New("target distance must be finite")
 	}
 	if goal.TargetDistanceMeters <= 0 {
 		return errors.New("target distance must be greater than zero")
