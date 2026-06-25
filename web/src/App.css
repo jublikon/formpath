@@ -56,6 +56,13 @@ header h1 {
   font-size: 15px;
 }
 
+.integration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 .primary-action {
   display: inline-flex;
   align-items: center;
@@ -97,6 +104,8 @@ header h1 {
   border-radius: 6px;
   font-size: 14px;
   font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -104,6 +113,14 @@ header h1 {
   color: #2f6158;
   background: #edf4f2;
   border-color: #6f968d;
+}
+
+.secondary-action:disabled,
+.secondary-action:disabled:hover {
+  color: #7b8784;
+  background: #eef2f1;
+  border-color: #d9dfdd;
+  cursor: not-allowed;
 }
 
 .status {
@@ -528,6 +545,11 @@ header h1 {
     flex-direction: column;
   }
 
+  .integration-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .section-heading {
     align-items: flex-start;
     flex-direction: column;
@@ -539,6 +561,10 @@ header h1 {
   }
 
   .primary-action {
+    width: 100%;
+  }
+
+  .integration-actions .secondary-action {
     width: 100%;
   }
 

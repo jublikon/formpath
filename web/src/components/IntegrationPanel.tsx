@@ -14,9 +14,11 @@ export function IntegrationPanel({
   let description = 'Connect Strava to import your activities.'
 
   if (connected && hasActivities) {
-    description = 'Connected and ready to sync new activities.'
+    description =
+      'Connected. Sync new activities or change the connected account.'
   } else if (connected) {
-    description = 'Connected. Sync your activities to build your overview.'
+    description =
+      'Connected. Sync your activities or change the connected account.'
   } else if (hasActivities) {
     description = 'Reconnect Strava to sync new activities.'
   }
@@ -34,14 +36,23 @@ export function IntegrationPanel({
       </div>
 
       {connected ? (
-        <button
-          className="primary-action"
-          type="button"
-          disabled={syncing}
-          onClick={onSync}
+        <div
+          className="integration-actions"
+          role="group"
+          aria-label="Strava actions"
         >
-          {syncing ? 'Syncing...' : 'Sync activities'}
-        </button>
+          <a className="primary-action" href="/auth/strava">
+            Change Account
+          </a>
+          <button
+            className="secondary-action"
+            type="button"
+            disabled={syncing}
+            onClick={onSync}
+          >
+            {syncing ? 'Syncing...' : 'Sync activities'}
+          </button>
+        </div>
       ) : (
         <a className="primary-action" href="/auth/strava">
           {hasActivities ? 'Reconnect Strava' : 'Connect with Strava'}
