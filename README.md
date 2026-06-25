@@ -17,7 +17,7 @@ Formpath is a portfolio project built to demonstrate end-to-end product
 engineering: product discovery, architecture decisions, backend and frontend
 development, data modeling, testing, and durable technical documentation.
 
-## What Works Today
+## Features
 
 - Strava OAuth2 connection with CSRF state validation and automatic token
   refresh
@@ -41,7 +41,7 @@ factual training context around it. See the
 [Epic 004](docs/epics/004-goal-aware-training-status.md) for the boundary
 between implemented and planned behavior.
 
-## Why the Architecture Looks This Way
+## Architecture
 
 Formpath treats imported provider data as valuable source material rather than
 disposable API responses.
