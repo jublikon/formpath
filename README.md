@@ -138,6 +138,7 @@ docker compose up --build
 In a second terminal:
 
 ```sh
+nvm use
 cd web
 npm ci
 npm run dev
@@ -172,6 +173,7 @@ go test ./...
 Run the frontend tests and quality checks:
 
 ```sh
+nvm use
 cd web
 npm test
 npm run lint

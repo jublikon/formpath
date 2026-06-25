@@ -3,11 +3,20 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
+    "check-node": "node ./scripts/check-node-version.cjs",
+    "predev": "npm run check-node",
     "dev": "vite",
+    "prebuild": "npm run check-node",
     "build": "tsc -b && vite build",
+    "prelint": "npm run check-node",
     "lint": "eslint .",
+    "pretest": "npm run check-node",
     "test": "vitest run",
+    "prepreview": "npm run check-node",
     "preview": "vite preview"
   },
   "dependencies": {
