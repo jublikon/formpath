@@ -3,7 +3,8 @@ id: epic-004
 number: 4
 slug: goal-aware-training-status
 related_adrs: []
-related_changelogs: []
+related_changelogs:
+  - changelog-008
 ---
 
 # Epic 004: Goal-Aware Training Status

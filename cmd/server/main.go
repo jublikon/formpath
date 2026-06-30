@@ -28,6 +28,9 @@ func main() {
 	mux.HandleFunc("GET /api/integrations/strava", stravaIntegrationHandler)
 	mux.HandleFunc("GET /api/activities", activitiesLocalHandler)
 	mux.HandleFunc("POST /api/activities/sync", activitiesSyncHandler)
+	mux.HandleFunc("GET /api/training-goal", trainingGoalGetHandler)
+	mux.HandleFunc("PUT /api/training-goal", trainingGoalPutHandler)
+	mux.HandleFunc("DELETE /api/training-goal", trainingGoalDeleteHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
