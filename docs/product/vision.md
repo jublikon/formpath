@@ -95,11 +95,17 @@ than a guaranteed continuous raw stream from consumer wearables. Consumer
 watches, rings, bands, and vendor clouds should be treated primarily as data
 providers whose access patterns and raw-data availability vary by platform.
 
-An iOS companion app is a plausible future product surface for HealthKit-backed
-imports, local check-ins, notifications, and lightweight capture workflows. It
-should not assume unrestricted background Bluetooth streaming. Background BLE
-experiments may be valuable, but iOS background execution and energy policy make
-arbitrary always-on 24/7 streaming a poor foundation for the product plan.
+An iOS companion app is a plausible future product surface for low-friction
+HealthKit-backed imports, local check-ins, notifications, and lightweight
+capture workflows. The intended experience is that a user grants permissions
+once and Formpath keeps relevant local health and training context fresh in the
+background where the platform allows it, without requiring frequent manual
+sync actions.
+
+That background-sync goal is separate from unrestricted background Bluetooth
+streaming. Background BLE experiments may be valuable for session-based sensors,
+but the product plan should not depend on arbitrary always-on 24/7 raw BLE
+streams from consumer devices.
 
 Polar H10 or Polar Verity Sense integrations are useful candidates for guided
 live workout or recovery-measurement experiments. They should be treated as

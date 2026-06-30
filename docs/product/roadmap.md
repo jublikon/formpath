@@ -36,8 +36,8 @@ Connect Strava, import activities through a raw-first ELT pipeline, preserve pro
   input
 - An explainable recovery state based on personal baselines and training load
 - Guided Polar H10 recovery measurements and later live workout streams
-- An iOS companion app prototype for HealthKit import, check-ins, and local
-  mobile workflows
+- An iOS companion app prototype for low-friction HealthKit import, background
+  sync where the platform allows it, check-ins, and local mobile workflows
 - Adaptive training recommendations and plans grounded in goals and recovery
 - A daily training decision API that returns a typed decision, workout context,
   reasons, confidence, risk flags, and any plan change
@@ -94,7 +94,13 @@ but these development builds have short-lived signing and are not a substitute
 for distribution. Broader beta distribution through TestFlight and App Store
 distribution belong to an Apple Developer Program milestone.
 
-The iOS companion should prioritize HealthKit-backed imports, local check-ins,
-and product workflows that fit the platform. CoreBluetooth background behavior
-may support constrained sensor experiments, but Formpath should not assume that
-iOS will allow arbitrary guaranteed 24/7 Bluetooth streaming.
+The iOS companion should prioritize HealthKit-backed imports, background-capable
+sync where the platform allows it, local check-ins, and product workflows that
+fit the platform. The intended user experience is permission-first and
+low-friction: after setup, Formpath should keep local health and training
+context fresh without asking the user to manually sync all the time.
+
+That expectation should not be conflated with arbitrary continuous raw Bluetooth
+streaming. CoreBluetooth background behavior may support constrained
+session-based sensor experiments, but Formpath should not assume that iOS will
+allow guaranteed always-on 24/7 raw BLE streams.
