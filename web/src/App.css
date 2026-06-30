@@ -146,6 +146,126 @@ header h1 {
   border-color: #b9ddd3;
 }
 
+.goal-panel {
+  margin-bottom: 32px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #d9dfdd;
+  border-radius: 8px;
+}
+
+.goal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.danger-action {
+  color: #8b2f2f;
+  border-color: #d4aaa6;
+}
+
+.danger-action:hover {
+  color: #742727;
+  background: #fff7f7;
+  border-color: #c58d87;
+}
+
+.goal-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.goal-summary div {
+  min-width: 0;
+  padding-left: 14px;
+  border-left: 3px solid #d9dfdd;
+}
+
+.goal-summary dt {
+  margin-bottom: 6px;
+  color: #6d7875;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.goal-summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #17201e;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.goal-form {
+  display: grid;
+  gap: 16px;
+}
+
+.goal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field span {
+  color: #52605d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  color: #17201e;
+  background: #ffffff;
+  border: 1px solid #b8c5c1;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: 2px solid #397368;
+  outline-offset: 2px;
+}
+
+.goal-message {
+  margin: 0;
+  color: #5d6a67;
+  font-size: 14px;
+}
+
+.goal-message-error {
+  color: #8b2f2f;
+}
+
+.goal-retry-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.goal-retry-state p {
+  margin: 0;
+  color: #52605d;
+  line-height: 1.5;
+}
+
 .overview-summary {
   margin-bottom: 32px;
 }
@@ -520,6 +640,10 @@ header h1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .goal-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .activity-chart-grid {
     grid-template-columns: 1fr;
   }
@@ -548,6 +672,28 @@ header h1 {
   .integration-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .goal-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .goal-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .goal-retry-state {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .goal-actions .secondary-action {
+    width: 100%;
+  }
+
+  .goal-retry-state .secondary-action {
+    width: 100%;
   }
 
   .section-heading {
@@ -586,6 +732,7 @@ header h1 {
 
 @media (max-width: 340px) {
   .metric-grid,
+  .goal-summary,
   .activity dl {
     grid-template-columns: 1fr;
   }

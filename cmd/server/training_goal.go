@@ -14,6 +14,7 @@ const (
 	trainingGoalTypeDistanceEvent = "distance_event"
 	trainingGoalSportRun          = "run"
 	trainingGoalSportRide         = "ride"
+	maxTrainingGoalDuration       = 2147483647
 )
 
 var ErrTrainingGoalNotFound = errors.New("training goal not found")
@@ -181,8 +182,13 @@ func (goal TrainingGoal) Validate() error {
 	if !validCalendarDate(goal.TargetDate) {
 		return errors.New("target date must be a valid YYYY-MM-DD calendar date")
 	}
-	if goal.TargetDurationSeconds != nil && *goal.TargetDurationSeconds <= 0 {
-		return errors.New("target duration must be greater than zero")
+	if goal.TargetDurationSeconds != nil {
+		if *goal.TargetDurationSeconds <= 0 {
+			return errors.New("target duration must be greater than zero")
+		}
+		if *goal.TargetDurationSeconds > maxTrainingGoalDuration {
+			return errors.New("target duration is too large")
+		}
 	}
 	return nil
 }
