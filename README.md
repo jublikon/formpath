@@ -209,6 +209,9 @@ eventually, recovery-aware support:
 4. Build explainable recovery states based on personal baselines and training
    load.
 5. Support adaptive recommendations and agent-assisted training experiences.
+6. Grow toward an open, device-agnostic training decision engine that can
+   explain daily training choices using activity, recovery, subjective, and
+   goal context.
 
 Future capabilities are intentionally kept separate from current claims. The
 [product vision](docs/product/vision.md) describes the long-term purpose, while
