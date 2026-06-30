@@ -56,6 +56,64 @@ Examples include:
 - reducing the load of the next workout after poor sleep or insufficient recovery
 - adjusting plans dynamically instead of following a rigid static schedule
 
+### Future Scenario: Adaptive Training Decision Engine
+
+A long-term product direction is for Formpath to become an open-source,
+device-agnostic adaptive training decision engine for endurance athletes.
+
+The important distinction is engine-first rather than dashboard-first or
+LLM-first. Formpath should not merely visualize imported data or ask a language
+model to improvise coaching advice. The durable core should be a testable
+decision system that combines:
+
+- canonical activity history
+- training load and recent workout context
+- concrete goals and available training time
+- recovery signals such as sleep, HRV, and resting heart rate
+- subjective check-ins such as fatigue, soreness, stress, and motivation
+
+The eventual daily question is: "What should I do today?" Example outputs could
+include an easy endurance session, a hard workout, rest, mobility, a plan
+change, confidence, risk flags, and a clear explanation of the data basis behind
+the decision.
+
+This future direction should remain explainable by design. Deterministic rules,
+metrics, baselines, and validation should own the decision object. A language
+model can later help summarize, explain, translate, or collect user feedback,
+but it should not be the only place where training decisions are made.
+
+### Future Scenario: Device and Data Strategy
+
+Formpath should prefer a device-agnostic import strategy over trying to become a
+24/7 raw-sensor wearable. The platform can create more leverage by normalizing
+activity, health, recovery, and subjective data from sources such as Strava,
+Apple Health, Garmin, Polar, Oura, WHOOP, Amazfit, and future providers.
+
+For 24/7 recovery signals, the expected path is imported or synchronized health
+data such as sleep, HRV, resting heart rate, and daily activity summaries rather
+than a guaranteed continuous raw stream from consumer wearables. Consumer
+watches, rings, bands, and vendor clouds should be treated primarily as data
+providers whose access patterns and raw-data availability vary by platform.
+
+An iOS companion app is a plausible future product surface for low-friction
+HealthKit-backed imports, local check-ins, notifications, and lightweight
+capture workflows. The intended experience is that a user grants permissions
+once and Formpath keeps relevant local health and training context fresh in the
+background where the platform allows it, without requiring frequent manual
+sync actions.
+
+That background-sync goal is separate from unrestricted background Bluetooth
+streaming. Background BLE experiments may be valuable for session-based sensors,
+but the product plan should not depend on arbitrary always-on 24/7 raw BLE
+streams from consumer devices.
+
+Polar H10 or Polar Verity Sense integrations are useful candidates for guided
+live workout or recovery-measurement experiments. They should be treated as
+session-based research inputs, not as the main path to a consumer-grade 24/7
+recovery system. Dedicated research hardware may offer deeper raw access, but
+its cost and audience make it a later investigation rather than the core
+consumer direction.
+
 ### Future Scenario: Capability Goals
 
 As a possible future product direction, Formpath could support ongoing
@@ -96,6 +154,8 @@ Formpath is differentiated by being:
 - **cross-platform** rather than tied to a single manufacturer
 - **open** rather than locked into one device ecosystem
 - **data-unified** rather than fragmented across apps
+- **decision-engine-first** rather than only a dashboard or generic chatbot
+- **explainable** rather than opaque about why a recommendation changed
 - **interactive** rather than passive
 - **adaptive** rather than static
 - **agentic** rather than limited to fixed dashboards or predefined flows
@@ -112,6 +172,8 @@ Formpath is not:
 - a monolithic closed ecosystem
 - a rigid PDF training plan
 - just another generic fitness plan app
+- a direct attempt to clone a proprietary wearable
+- a product that depends on unrestricted 24/7 raw sensor streaming
 - a product that only stores data without helping users act on it
 
 ---
