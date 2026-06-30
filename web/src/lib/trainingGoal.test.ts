@@ -47,6 +47,7 @@ describe('parseDurationInput', () => {
     expect(parseDurationInput('3:75')).toBeNull()
     expect(parseDurationInput('soon')).toBeNull()
     expect(parseDurationInput('0:00')).toBeNull()
+    expect(parseDurationInput('596524:00')).toBeNull()
   })
 })
 

@@ -44,6 +44,11 @@ recommendation, or training-plan claims.
   days remaining, and optional target time.
 - Kept target-date validation in the browser for this slice, rejecting dates
   before the current local calendar date.
+- Separated missing-goal empty state from goal-load failures so a temporary API
+  failure does not open a create-or-replace form.
+- Added a retry action for goal-load failures.
+- Added confirmation before removing the active goal.
+- Bounded optional target duration to the Postgres integer range before save.
 - Preserved the existing training overview, activity graphs, Strava integration
   panel, and recent activity list.
 
@@ -55,6 +60,10 @@ recommendation, or training-plan claims.
   one-active-goal constraint in Epic 004.
 - Treat a missing goal as a normal empty state in the frontend rather than a
   page-level loading failure.
+- Treat a goal-load failure as an unavailable state with retry, not as an empty
+  goal state, because `PUT /api/training-goal` replaces the one active goal.
+- Confirm deletion before removing the active goal because the first goal UI has
+  no undo or goal history.
 - Keep goal status calculations out of this slice. Recent-vs-previous-period
   goal status is the next milestone after the create/edit/remove flow.
 - Keep CSS in the existing app stylesheet for this change. Splitting styles

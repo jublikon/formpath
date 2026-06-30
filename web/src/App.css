@@ -253,6 +253,19 @@ header h1 {
   color: #8b2f2f;
 }
 
+.goal-retry-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.goal-retry-state p {
+  margin: 0;
+  color: #52605d;
+  line-height: 1.5;
+}
+
 .overview-summary {
   margin-bottom: 32px;
 }
@@ -670,7 +683,16 @@ header h1 {
     flex-direction: column;
   }
 
+  .goal-retry-state {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .goal-actions .secondary-action {
+    width: 100%;
+  }
+
+  .goal-retry-state .secondary-action {
     width: 100%;
   }
 

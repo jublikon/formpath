@@ -12,8 +12,11 @@ import { formatDistance, formatDuration } from '../lib/formatters'
 type TrainingGoalPanelProps = {
   goal: TrainingGoal | null
   today: Date
+  loading: boolean
   saving: boolean
   error: string | null
+  loadFailed: boolean
+  onRetryLoad: () => Promise<void>
   onSave: (goal: TrainingGoalPayload) => Promise<void>
   onDelete: () => Promise<void>
 }
@@ -58,8 +61,11 @@ function describeDaysRemaining(daysRemaining: number | null): string {
 export function TrainingGoalPanel({
   goal,
   today,
+  loading,
   saving,
   error,
+  loadFailed,
+  onRetryLoad,
   onSave,
   onDelete,
 }: TrainingGoalPanelProps) {
@@ -98,6 +104,10 @@ export function TrainingGoalPanel({
   }
 
   async function deleteGoal() {
+    if (!window.confirm('Remove this training goal?')) {
+      return
+    }
+
     setFormError(null)
     try {
       await onDelete()
@@ -110,6 +120,7 @@ export function TrainingGoalPanel({
   const daysRemaining = goal
     ? calculateCalendarDaysRemaining(goal.target_date, today)
     : null
+  const showLoadFailure = loadFailed && !goal
 
   return (
     <section className="goal-panel" aria-labelledby="goal-heading">
@@ -148,6 +159,26 @@ export function TrainingGoalPanel({
         </p>
       )}
 
+      {showLoadFailure && (
+        <div className="goal-retry-state">
+          <p>
+            The current goal is temporarily unavailable. Try loading it again
+            before creating or replacing a goal.
+          </p>
+          <button
+            className="secondary-action"
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setFormError(null)
+              void onRetryLoad()
+            }}
+          >
+            {loading ? 'Loading...' : 'Retry'}
+          </button>
+        </div>
+      )}
+
       {goal && !isEditing && (
         <dl className="goal-summary">
           <div>
@@ -175,7 +206,7 @@ export function TrainingGoalPanel({
         </dl>
       )}
 
-      {isEditing && (
+      {isEditing && !showLoadFailure && (
         <form className="goal-form" onSubmit={submitGoal} noValidate>
           <div className="goal-form-grid">
             <label className="field">
@@ -239,7 +270,6 @@ export function TrainingGoalPanel({
               <span>Target time (optional)</span>
               <input
                 type="text"
-                inputMode="numeric"
                 placeholder="3:30"
                 value={formValues.targetDuration}
                 onChange={(event) =>

@@ -3,13 +3,23 @@ import { describe, expect, it } from 'vitest'
 import { TrainingGoalPanel } from './TrainingGoalPanel'
 import type { TrainingGoal } from '../types/trainingGoal'
 
-function renderPanel(goal: TrainingGoal | null) {
+function renderPanel(
+  goal: TrainingGoal | null,
+  options: {
+    loading?: boolean
+    error?: string | null
+    loadFailed?: boolean
+  } = {},
+) {
   return renderToStaticMarkup(
     <TrainingGoalPanel
       goal={goal}
       today={new Date(2026, 5, 18)}
+      loading={options.loading ?? false}
       saving={false}
-      error={null}
+      error={options.error ?? null}
+      loadFailed={options.loadFailed ?? false}
+      onRetryLoad={async () => undefined}
       onSave={async () => undefined}
       onDelete={async () => undefined}
     />,
@@ -25,6 +35,19 @@ describe('TrainingGoalPanel', () => {
     expect(html).toContain('Distance (km)')
     expect(html).toContain('placeholder="42.195"')
     expect(html).toContain('Save goal')
+  })
+
+  it('renders a retry state instead of the create form when goal loading fails', () => {
+    const html = renderPanel(null, {
+      error: "We couldn't load your training goal.",
+      loadFailed: true,
+    })
+
+    expect(html).toContain("We couldn&#x27;t load your training goal.")
+    expect(html).toContain('Retry')
+    expect(html).toContain('before creating or replacing a goal')
+    expect(html).not.toContain('Save goal')
+    expect(html).not.toContain('Event name')
   })
 
   it('renders active goal facts without readiness claims', () => {

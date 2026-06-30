@@ -72,10 +72,12 @@ function App() {
     useState<StravaIntegration | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isGoalLoading, setIsGoalLoading] = useState(false)
   const [isGoalSaving, setIsGoalSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [goalError, setGoalError] = useState<string | null>(null)
+  const [goalLoadFailed, setGoalLoadFailed] = useState(false)
   const [stravaStatus] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search)
     return params.get('strava')
@@ -84,12 +86,18 @@ function App() {
   useEffect(() => {
     async function loadInitialData() {
       try {
-        const goalRequest = fetchTrainingGoal().catch(() => {
-          setGoalError(
-            "We couldn't load your training goal. Your training overview is still available.",
-          )
-          return null
-        })
+        const goalRequest = fetchTrainingGoal()
+          .then((goalData) => {
+            setGoalLoadFailed(false)
+            return goalData
+          })
+          .catch(() => {
+            setGoalLoadFailed(true)
+            setGoalError(
+              "We couldn't load your training goal. Your training overview is still available.",
+            )
+            return null
+          })
 
         const [activitiesResponse, integrationResponse, goalData] =
           await Promise.all([
@@ -171,6 +179,7 @@ function App() {
     try {
       const savedGoal = await saveTrainingGoalRequest(goal)
       setTrainingGoal(savedGoal)
+      setGoalLoadFailed(false)
     } catch (err) {
       setGoalError("We couldn't save your training goal. Please try again.")
       throw err
@@ -186,11 +195,30 @@ function App() {
     try {
       await deleteTrainingGoalRequest()
       setTrainingGoal(null)
+      setGoalLoadFailed(false)
     } catch (err) {
       setGoalError("We couldn't remove your training goal. Please try again.")
       throw err
     } finally {
       setIsGoalSaving(false)
+    }
+  }
+
+  async function reloadTrainingGoal() {
+    setIsGoalLoading(true)
+    setGoalError(null)
+
+    try {
+      const goalData = await fetchTrainingGoal()
+      setTrainingGoal(goalData)
+      setGoalLoadFailed(false)
+    } catch {
+      setGoalLoadFailed(true)
+      setGoalError(
+        "We couldn't load your training goal. Your training overview is still available.",
+      )
+    } finally {
+      setIsGoalLoading(false)
     }
   }
 
@@ -245,8 +273,11 @@ function App() {
           key={trainingGoalPanelKey}
           goal={trainingGoal}
           today={today}
+          loading={isGoalLoading}
           saving={isGoalSaving}
           error={goalError}
+          loadFailed={goalLoadFailed}
+          onRetryLoad={reloadTrainingGoal}
           onSave={saveTrainingGoal}
           onDelete={deleteTrainingGoal}
         />

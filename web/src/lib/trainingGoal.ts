@@ -22,6 +22,8 @@ export type TrainingGoalValidationResult =
       message: string
     }
 
+const maxTrainingGoalDurationSeconds = 2147483647
+
 export function localDateKey(date: Date): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -118,6 +120,10 @@ export function parseDurationInput(value: string): number | undefined | null {
   }
 
   const totalSeconds = hours * 60 * 60 + minutes * 60 + seconds
+  if (totalSeconds > maxTrainingGoalDurationSeconds) {
+    return null
+  }
+
   return totalSeconds > 0 ? totalSeconds : null
 }
 

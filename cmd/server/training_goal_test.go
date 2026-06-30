@@ -135,6 +135,14 @@ func TestTrainingGoalValidate_RejectsInvalidGoals(t *testing.T) {
 			},
 			wantErr: "target duration must be greater than zero",
 		},
+		{
+			name: "too large target duration",
+			change: func(goal *TrainingGoal) {
+				value := maxTrainingGoalDuration + 1
+				goal.TargetDurationSeconds = &value
+			},
+			wantErr: "target duration is too large",
+		},
 	}
 
 	for _, tt := range tests {
